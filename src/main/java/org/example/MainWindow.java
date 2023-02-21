@@ -317,16 +317,10 @@ public class MainWindow extends VBox {
         tblStats.getSelectionModel().selectedItemProperty().addListener((ob,ov,nv) -> {
             ttFileView.getSelectionModel().clearSelection(); //clear selection from Tree View
             resetRectStroke();
-            flatMapTreeItem(ttFileView.getRoot()).filter(ti ->FileTypeSizeCount.fromPath(ti.getValue().p()).type().equals(nv.type())).forEach(
-                    ti -> {
-                        Rectangle r = pathToRect.get(ti);
-                        if(r != null ) {
-                            r.setStroke(Color.YELLOW);
-                        } else {
-                            System.out.println("No Rectangle for: "+ ti);
-                        }
-                    }
-            );
+            flatMapTreeItem(
+                    ttFileView.getRoot()).filter(ti ->FileTypeSizeCount.fromPath(ti.getValue().p()).type().equals(nv.type()))
+                    .flatMap(ti -> Optional.of(pathToRect.get(ti)).stream())
+            .forEach( r -> r.setStroke(Color.YELLOW) );
         });
     }
 
