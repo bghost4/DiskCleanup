@@ -7,6 +7,9 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.*;
+import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -15,11 +18,13 @@ import javafx.stage.DirectoryChooser;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 
+import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
@@ -37,13 +42,13 @@ public class MainWindow extends VBox {
     private TableView<FileTypeSizeCount> tblStats;
 
     @FXML
-    private TreeTableView<TI> ttFileView;
+    private TreeTableView<StatItem> ttFileView;
 
     @FXML
-    private TreeTableColumn<TI, String> ttcName;
+    private TreeTableColumn<StatItem, String> ttcName;
 
     @FXML
-    private TreeTableColumn<TI, Long> ttcSize;
+    private TreeTableColumn<StatItem, Long> ttcSize;
 
     @FXML
     private TableColumn<FileTypeSizeCount,Long> tcCount,tcSize;
@@ -52,22 +57,13 @@ public class MainWindow extends VBox {
 
     private Thread genTreeMapThread;
 
-    RectPacker<TreeItem<TI>,Pair<TreeItem<TI>,Rectangle>> packer;
+    RectPacker<TreeItem<StatItem>,Pair<TreeItem<StatItem>,Rectangle>> packer;
     record Pair<A,B> (A a,B b) { }
 
-    private final HashMap<TreeItem<TI>,Rectangle> pathToRect = new HashMap<>();
-    private final HashMap<Rectangle,TreeItem<TI>> rectToPath = new HashMap<>();
+    private final HashMap<TreeItem<StatItem>,Rectangle> pathToRect = new HashMap<>();
+    private final HashMap<Rectangle,TreeItem<StatItem>> rectToPath = new HashMap<>();
 
     private final HashMap<String,Color> typeColor = new HashMap<>();
-
-    record TI (Path p,boolean isProcesing,long length) {
-        public static TI empty(Path p) {
-            return new TI(p,true,0);
-        }
-        public TI update(long length) {
-            return new TI(p,false,length);
-        }
-    }
 
     private record FileTypeSizeCount (String type,long size,long count) {
         public static FileTypeSizeCount fromPath(Path p) {
@@ -92,15 +88,40 @@ public class MainWindow extends VBox {
     public void onScanFolder(ActionEvent event) {
         DirectoryChooser dc = new DirectoryChooser();
         File startDir = dc.showDialog(null);
+
+        pUsageView.getChildren().clear();
+        rectToPath.clear();
+        pathToRect.clear();
+        tblStats.getItems().clear();
+        ttFileView.setRoot(null);
+
         if(startDir.isDirectory()) {
             beginDirectoryScan(startDir.toPath());
         }
     }
 
+    @FXML
+    private void onFindDuplicates(ActionEvent e) {
+
+    }
+
+    @FXML
+    private void onGraphTypeUsage(ActionEvent e) {
+
+    }
+
+    private void delete(TreeItem<StatItem> item) {
+        TreeItem<StatItem> parent = item.getParent();
+        if(parent != null) {
+            parent.getChildren().remove(item);
+            generateTreeMap();
+        } else {
+            //TODO display message about removing a root node
+        }
+    }
+
     private void beginDirectoryScan(Path rootPath) {
-            ttFileView.setRoot(buildTree(TI.empty(rootPath)));
-            pathToRect.clear();
-            rectToPath.clear();
+            ttFileView.setRoot(buildTree(StatItem.empty(rootPath)));
     }
 
     private void generateTreeMap() {
@@ -122,11 +143,11 @@ public class MainWindow extends VBox {
 
     }
 
-    private void generateTreeMap(Bound b,List<TreeItem<TI>> items) {
+    private void generateTreeMap(Bound b,List<TreeItem<StatItem>> items) {
             if(Thread.currentThread().isInterrupted()) { return; }
             packer.pack(b, items).forEach(
                     p -> {
-                        if(Files.isDirectory(p.a.getValue().p) && p.a.getChildren().size() > 0) {
+                        if(Files.isDirectory(p.a.getValue().p()) && p.a.getChildren().size() > 0) {
                             p.b.setFill(Color.TRANSPARENT); //force override Color
                             generateTreeMap(fromRect(p.b),p.a.getChildren());
                         }
@@ -139,8 +160,8 @@ public class MainWindow extends VBox {
         return new Bound(r.getX(),r.getY(),r.getWidth(),r.getHeight());
     }
 
-    private TreeItem<TI> buildTree(TI p) {
-        TreeItem<TI> me = new TreeItem(p);
+    private TreeItem<StatItem> buildTree(StatItem p) {
+        TreeItem<StatItem> me = new TreeItem(p);
         Executor exec = Executors.newFixedThreadPool(8);
         FileScannerTask fst = new FileScannerTask(me,exec,(item) -> {
         });
@@ -151,16 +172,18 @@ public class MainWindow extends VBox {
                generateTreeMap();
            }
         });
+        me.setExpanded(true);
         return me;
     }
 
     @FXML
     private void initialize() {
         ttFileView.setColumnResizePolicy(TreeTableView.CONSTRAINED_RESIZE_POLICY);
+        createTreeContextMenu();
         ttcName.setMaxWidth(1f * Integer.MAX_VALUE * 80);
         ttcSize.setMaxWidth(1f * Integer.MAX_VALUE * 20);
         ttcName.setCellValueFactory( vf -> new ReadOnlyStringWrapper(vf.getValue().getValue().p().getFileName().toString()) );
-        ttcSize.setCellValueFactory( vf -> new ReadOnlyObjectWrapper( vf.getValue().getValue().length) );
+        ttcSize.setCellValueFactory( vf -> new ReadOnlyObjectWrapper( vf.getValue().getValue().length()) );
         ttcSize.setCellFactory(vf -> new TreeTableCell<>(){
             @Override
             protected void updateItem(Long item, boolean empty) {
@@ -178,8 +201,8 @@ public class MainWindow extends VBox {
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 if(!empty && item != null) {
-                    TI subItem = this.getTableRow().getItem();
-                    if(subItem != null && subItem.isProcesing) {
+                    StatItem subItem = this.getTableRow().getItem();
+                    if(subItem != null && subItem.isProcesing()) {
                         ProgressIndicator pi = new ProgressIndicator();
                         pi.setMaxWidth(16);
                         pi.setMaxHeight(16);
@@ -224,8 +247,8 @@ public class MainWindow extends VBox {
             }
         });
 
-        packer = new RectPacker<TreeItem<TI>,Pair<TreeItem<TI>,Rectangle>>(
-                t -> t.getValue().length,
+        packer = new RectPacker<TreeItem<StatItem>,Pair<TreeItem<StatItem>,Rectangle>>(
+                t -> t.getValue().length(),
                 (ti,b) -> {
                     Rectangle r = new Rectangle(b.x(),b.y(),b.width(),b.height());
                     if(Files.isDirectory(ti.getValue().p())) { r.setFill(Color.TRANSPARENT); } else {
@@ -233,7 +256,7 @@ public class MainWindow extends VBox {
                     }
                     r.setStroke(Color.BLACK);
                     r.setStrokeWidth(1);
-                    Tooltip tt = new Tooltip(ti.getValue().p().toString()+" ("+FileUtils.byteCountToDisplaySize(ti.getValue().length)+")");
+                    Tooltip tt = new Tooltip(ti.getValue().p().toString()+" ("+FileUtils.byteCountToDisplaySize(ti.getValue().length())+")");
                     Tooltip.install(r,tt);
                     r.setOnMouseClicked( eh -> {
                         setTreeSelection(ti);
@@ -251,6 +274,8 @@ public class MainWindow extends VBox {
 
         pUsageView.widthProperty().addListener(il -> generateTreeMap());
         pUsageView.heightProperty().addListener(il->generateTreeMap());
+
+        //ttFileView.setContextMenu();
 
         ttFileView.getSelectionModel().selectedItemProperty().addListener((ob,ov,nv) -> {
             if(ov != null) {
@@ -278,13 +303,80 @@ public class MainWindow extends VBox {
         });
     }
 
-    private void setTreeSelection(TreeItem<TI> ti) {
+    private void createTreeContextMenu() {
+        ContextMenu ctx = new ContextMenu();
+        MenuItem miSystemOpen = new MenuItem("Open With System Viewer");
+            miSystemOpen.setOnAction(eh -> openPath(ttFileView.getSelectionModel().getSelectedItem()));
+        MenuItem miDeleteNode = new MenuItem("Delete (Not Really)");
+            miDeleteNode.setOnAction(eh -> delete(ttFileView.getSelectionModel().getSelectedItem()));
+        MenuItem miZoomInto = new MenuItem("Zoom Into");
+            miZoomInto.setOnAction(eh -> zoomIn(ttFileView.getSelectionModel().getSelectedItem()));
+        MenuItem miZoomOut = new MenuItem("Zoom Out");
+            miZoomOut.setOnAction(eh -> zoomOut());
+        MenuItem miZoomRoot = new MenuItem("Reset Zoom to TopLevel");
+            miZoomRoot.setOnAction(eh -> zoomRoot());
+        MenuItem miFindDuplicates = new MenuItem("Find Duplicates");
+            miFindDuplicates.setOnAction(eh -> findDuplicates(ttFileView.getSelectionModel().getSelectedItem()));
+        MenuItem miRebuildTree = new MenuItem("Rebuild Tree");
+            miRebuildTree.setOnAction(eh -> generateTreeMap() );
+        ctx.getItems().addAll(miSystemOpen,miDeleteNode,miRebuildTree,miZoomInto,miZoomOut,miZoomRoot,miFindDuplicates);
+        ttFileView.setContextMenu(ctx);
+    }
+
+    private void findDuplicates(TreeItem<StatItem> selectedItem) {
+    }
+
+    private void zoomIn(TreeItem<StatItem> item) {
+        ttFileView.setRoot(item);
+        generateFileTypeLegend();
+        generateTreeMap();
+    }
+    private void zoomOut() {
+        TreeItem<StatItem> parent = ttFileView.getRoot().getParent();
+        if(parent != null) {
+            ttFileView.setRoot(parent);
+            generateFileTypeLegend();
+            generateTreeMap();
+        }
+    }
+
+    private void zoomRoot() {
+        TreeItem<StatItem> last = ttFileView.getRoot();
+        while(true) {
+            if(last.getParent() == null) {
+                ttFileView.setRoot(last);
+                break;
+            } else {
+                last = last.getParent();
+            }
+        }
+        generateFileTypeLegend();
+        generateTreeMap();
+    }
+
+    private void openPath(TreeItem<StatItem> item) {
+        if(item == null) { return; }
+        Path p = item.getValue().p();
+
+            Runnable r = () -> {
+                try {
+                    Desktop.getDesktop().open(p.toFile());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            };
+            Thread openThread = new Thread(r);
+            openThread.start();
+
+    }
+
+    private void setTreeSelection(TreeItem<StatItem> ti) {
         expandTree(ti);
         ttFileView.scrollTo(ttFileView.getRow(ti));
         ttFileView.getSelectionModel().select(ti);
     }
 
-    private void expandTree(TreeItem<TI> selectedItem) {
+    private void expandTree(TreeItem<StatItem> selectedItem) {
         if(selectedItem != null) {
             expandTree(selectedItem.getParent());
             if(!selectedItem.isLeaf()) {
