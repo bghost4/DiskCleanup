@@ -8,8 +8,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class RectPacker<T,R> {
-    Function<T,Long> areaFunction;
-    BiFunction<T,Bound,R> mappingFunction;
+    final Function<T,Long> areaFunction;
+    final BiFunction<T,Bound,R> mappingFunction;
 
     public RectPacker(Function<T, Long> areaFunction, BiFunction<T, Bound, R> mappingFunction) {
         this.areaFunction = areaFunction;

@@ -15,20 +15,16 @@ import java.util.stream.Stream;
 public class FileScannerTask extends Task<TreeItem<StatItem>> {
 
     private final TreeItem<StatItem> myItem;
-    Executor executor;
-
-    final Consumer<TreeItem<StatItem>> whenDoneFunc;
+    final Executor executor;
 
     public FileScannerTask(TreeItem<StatItem> start, Executor e, Consumer<TreeItem<StatItem>> doneFunc){
         this.myItem = start;
         this.executor = e;
-        whenDoneFunc = doneFunc;
     }
 
     public FileScannerTask(TreeItem<StatItem> start, Executor e){
         this.myItem = start;
         this.executor = e;
-        whenDoneFunc = (i) -> {};
     }
 
 
@@ -39,13 +35,11 @@ public class FileScannerTask extends Task<TreeItem<StatItem>> {
         if(Files.isDirectory(myItem.getValue().p())) {
             List<TreeItem<StatItem>> children = Files.walk(myItem.getValue().p(), 1)
                     .flatMap(c -> c.equals(myItem.getValue().p()) ? Stream.empty() : Stream.of(StatItem.empty(c)))
-                    .map(TreeItem::new).collect(Collectors.toList());
+                    .map(TreeItem::new).toList();
             if(children.size() != 0) {
                 Platform.runLater(() -> {
                     myItem.getChildren().addAll(children);
-                    myItem.addEventHandler(TreeItem.childrenModificationEvent(),evt -> {
-                        updateParent(myItem.getParent());
-                    });
+                    myItem.addEventHandler(TreeItem.childrenModificationEvent(),evt -> updateParent(myItem.getParent()));
                 });
 
                 children.stream().map(
@@ -67,10 +61,6 @@ public class FileScannerTask extends Task<TreeItem<StatItem>> {
             } );
         }
         return myItem;
-    }
-
-    void updateValue(long l) {
-
     }
 
     void updateParent(TreeItem<StatItem> parent) {

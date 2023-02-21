@@ -92,7 +92,7 @@ public class MainWindow extends VBox {
         rectToPath.clear();
         pathToRect.clear();
         tblStats.getItems().clear();
-        ttFileView.setRoot(null);
+        //ttFileView.setRoot(null);
 
         if(startDir.isDirectory()) {
             beginDirectoryScan(startDir.toPath());
@@ -260,7 +260,11 @@ public class MainWindow extends VBox {
                     pathToRect.put(ti, r);
                     rectToPath.put(r, ti);
                     Platform.runLater(() -> pUsageView.getChildren().add(r));
-
+                    r.setOnMouseClicked(eh -> {
+                        recursiveExpand(ti);
+                        ttFileView.getSelectionModel().select(ti);
+                        ttFileView.scrollTo(ttFileView.getRow(ti));
+                    });
                     //System.out.println("Created Rectangle for: "+ti.getValue().toString());
                     return new Pair<>(ti, r);
                 }
@@ -281,7 +285,10 @@ public class MainWindow extends VBox {
                 if(nv.getParent() != null) {
                     nv.getParent().setExpanded(true);
                 }
-                ttFileView.scrollTo(ttFileView.getRow(nv));
+                //The following makes this unusable!
+                //it would be better if we could check the visibility of the TreeItem
+                //and if it was not visible, scroll it to the middle so you can keep some context
+                //ttFileView.scrollTo(ttFileView.getRow(nv));
             }
         });
 
@@ -299,6 +306,15 @@ public class MainWindow extends VBox {
                     }
             );
         });
+    }
+
+    void recursiveExpand(TreeItem<?> item) {
+        if(item.getParent() == null) {
+            System.err.println("ROOT: "+item.getValue().toString());
+            return;
+        }
+        item.getParent().setExpanded(true);
+        recursiveExpand(item.getParent());
     }
 
     private void createTreeContextMenu() {
