@@ -271,19 +271,20 @@ public class MainWindow extends VBox {
                     }
                     r.setStroke(Color.BLACK);
                     r.setStrokeWidth(1);
-                    Tooltip tt = new Tooltip(ti.getValue().p().toString() + " (" + FileUtils.byteCountToDisplaySize(ti.getValue().length()) + ")");
+                    Tooltip tt = new Tooltip(ttFileView.getRoot().getValue().p().relativize(ti.getValue().p()).toString() + " (" + FileUtils.byteCountToDisplaySize(ti.getValue().length()) + ")");
                     Tooltip.install(r, tt);
                     pathToRect.put(ti, r);
                     rectToPath.put(r, ti);
                     Platform.runLater(() -> pUsageView.getChildren().add(r));
                     r.setOnMouseClicked(eh -> {
-                        if(eh.getButton() == MouseButton.PRIMARY) {
+
                             recursiveExpand(ti);
                             ttFileView.getSelectionModel().select(ti);
                             ttFileView.scrollTo(ttFileView.getRow(ti));
-                        } else if( eh.getButton() == MouseButton.SECONDARY ) {
+
+                        if( eh.getButton() == MouseButton.SECONDARY ) {
                             ContextMenu mnu = ttFileView.getContextMenu();
-                            mnu.show(r,eh.getX(),eh.getY());
+                            mnu.show(r,eh.getScreenX(),eh.getScreenY());
                         }
                     });
                     //System.out.println("Created Rectangle for: "+ti.getValue().toString());
@@ -330,10 +331,7 @@ public class MainWindow extends VBox {
     }
 
     void recursiveExpand(TreeItem<?> item) {
-        if(item.getParent() == null) {
-            System.err.println("ROOT: "+item.getValue().toString());
-            return;
-        }
+        if(item.getParent() == null) { return; }
         item.getParent().setExpanded(true);
         recursiveExpand(item.getParent());
     }
@@ -446,6 +444,5 @@ public class MainWindow extends VBox {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        System.out.println("Main Window Load Procedure Called");
     }
 }
