@@ -233,7 +233,7 @@ public class MainWindow extends VBox {
                     }
                     r.setStroke(Color.BLACK);
                     r.setStrokeWidth(1);
-                    Tooltip tt = new Tooltip(ti.getValue().toString()+" ("+FileUtils.byteCountToDisplaySize(ti.getValue().length)+")");
+                    Tooltip tt = new Tooltip(ti.getValue().p().toString()+" ("+FileUtils.byteCountToDisplaySize(ti.getValue().length)+")");
                     Tooltip.install(r,tt);
                     r.setOnMouseClicked( eh -> {
                         setTreeSelection(ti);
