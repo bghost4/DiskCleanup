@@ -28,6 +28,7 @@ import java.util.*;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -59,6 +60,8 @@ public class MainWindow extends VBox {
     private Thread genTreeMapThread;
 
     RectPacker<TreeItem<StatItem>,Pair<TreeItem<StatItem>,Rectangle>> packer;
+    private boolean rectPaintForced;
+
     record Pair<A,B> (A a,B b) { }
 
     private final HashMap<TreeItem<StatItem>,Rectangle> pathToRect = new HashMap<>();
@@ -92,7 +95,7 @@ public class MainWindow extends VBox {
         pUsageView.getChildren().clear();
         rectToPath.clear();
         pathToRect.clear();
-        tblStats.getItems().clear();
+        //tblStats.getItems().clear();
         //ttFileView.setRoot(null);
 
         if(startDir.isDirectory()) {
@@ -266,13 +269,14 @@ public class MainWindow extends VBox {
                     Rectangle r = new Rectangle(b.x(), b.y(), b.width(), b.height());
                     if (Files.isDirectory(ti.getValue().p())) {
                         r.setFill(Color.TRANSPARENT);
+                        r.setPickOnBounds(false); //hopefully keeps directories from catching mouse events
                     } else {
                         r.setFill(typeColor.get(getType(ti.getValue().p())));
+                        Tooltip tt = new Tooltip(ttFileView.getRoot().getValue().p().relativize(ti.getValue().p()).toString() + " (" + FileUtils.byteCountToDisplaySize(ti.getValue().length()) + ")");
+                        Tooltip.install(r, tt);
                     }
                     r.setStroke(Color.BLACK);
                     r.setStrokeWidth(1);
-                    Tooltip tt = new Tooltip(ttFileView.getRoot().getValue().p().relativize(ti.getValue().p()).toString() + " (" + FileUtils.byteCountToDisplaySize(ti.getValue().length()) + ")");
-                    Tooltip.install(r, tt);
                     pathToRect.put(ti, r);
                     rectToPath.put(r, ti);
                     Platform.runLater(() -> pUsageView.getChildren().add(r));
@@ -299,11 +303,24 @@ public class MainWindow extends VBox {
 
         ttFileView.getSelectionModel().selectedItemProperty().addListener((ob,ov,nv) -> {
             if(ov != null) {
-                pathToRect.get(ov).setStroke(Color.BLACK);
+                Optional.ofNullable(pathToRect.get(ov)).ifPresent(r -> {
+                    if(Files.isDirectory(ov.getValue().p())) {
+                        r.toBack();
+                    }
+                    r.setStrokeWidth(2);
+                    r.setStroke(Color.BLACK);
+                });
             }
             if(nv != null) {
-                pathToRect.get(nv).toFront();
-                pathToRect.get(nv).setStroke(Color.RED);
+//                pathToRect.get(nv).toFront();
+//                pathToRect.get(nv).setStroke(Color.RED);
+
+                if(this.rectPaintForced) {
+                    resetRectFill();
+                }
+
+                forceRectFill(i -> isChildOf(nv,i),Color.LIGHTGRAY);
+
                 if(nv.getParent() != null) {
                     nv.getParent().setExpanded(true);
                 }
@@ -316,12 +333,24 @@ public class MainWindow extends VBox {
 
         tblStats.getSelectionModel().selectedItemProperty().addListener((ob,ov,nv) -> {
             ttFileView.getSelectionModel().clearSelection(); //clear selection from Tree View
-            resetRectStroke();
-            flatMapTreeItem(
-                    ttFileView.getRoot()).filter(ti ->FileTypeSizeCount.fromPath(ti.getValue().p()).type().equals(nv.type()))
-                    .flatMap(ti -> Optional.of(pathToRect.get(ti)).stream())
-            .forEach( r -> r.setStroke(Color.YELLOW) );
+            if(nv != null ) {
+                forceRectFill(ti -> getType(ti).equals(nv.type()), Color.LIGHTGRAY);
+            } else {
+                resetRectFill();
+            }
         });
+    }
+
+    boolean isChildOf(TreeItem<StatItem> haystack,TreeItem<StatItem> needle) {
+        TreeItem<StatItem> last = needle;
+        if(haystack == needle) { return true; }
+        while(last.getParent() != null) {
+            if(last.getParent() == haystack) {
+                return true;
+            }
+            last = last.getParent();
+        }
+        return false;
     }
 
     void recursiveExpand(TreeItem<?> item) {
@@ -348,6 +377,39 @@ public class MainWindow extends VBox {
             miRebuildTree.setOnAction(eh -> generateTreeMap() );
         ctx.getItems().addAll(miSystemOpen,miDeleteNode,miRebuildTree,miZoomInto,miZoomOut,miZoomRoot,miFindDuplicates);
         ttFileView.setContextMenu(ctx);
+    }
+
+    private void forceRectFill(Predicate<TreeItem<StatItem>> exclude,javafx.scene.paint.Paint paint) {
+        //TODO create an upper level thread executor pool to run the tasks
+        this.rectPaintForced = true;
+        //Thread t = new Thread( () ->
+            flatMapTreeItem(ttFileView.getRoot())
+                    .filter(ti -> !Files.isDirectory(ti.getValue().p())) //Leave directories out of this they are special
+                    .forEach(ti -> {
+                        Rectangle r = pathToRect.get(ti);
+                        javafx.scene.paint.Paint p;
+                        if(exclude.test(ti)) {
+                          p = typeColor.get(FileTypeSizeCount.fromPath(ti.getValue().p()).type());
+                        }  else { p =  paint; }
+                        if(r != null) {
+                            //Platform.runLater( () -> r.setFill(p) );
+                            r.setFill(p);
+                        }
+                    });
+//        );
+//        t.setDaemon(true);
+//        t.start();
+    }
+
+    private void resetRectFill() {
+        this.rectPaintForced = false;
+        flatMapTreeItem(ttFileView.getRoot())
+                .forEach(ti -> {
+                    Rectangle r = pathToRect.get(ti);
+                    if( r != null) {
+                        r.setFill(typeColor.get(getType(ti.getValue().p())));
+                    }
+                });
     }
 
     private void findDuplicates(TreeItem<StatItem> selectedItem) {
@@ -398,7 +460,14 @@ public class MainWindow extends VBox {
     }
 
     String getType(Path p) {
-        return FileTypeSizeCount.fromPath(p).type;
+        return FileTypeSizeCount.fromPath(p).type();
+    }
+
+    String getType(TreeItem<StatItem> item) {
+        return getType(item.getValue().p());
+    }
+    String getType(StatItem item) {
+        return getType(item.p());
     }
 
     void resetRectStroke() {
