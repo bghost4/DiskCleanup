@@ -9,6 +9,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.*;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -112,10 +113,25 @@ public class MainWindow extends VBox {
     private void delete(TreeItem<StatItem> item) {
         TreeItem<StatItem> parent = item.getParent();
         if(parent != null) {
+            if(ttFileView.getSelectionModel().getSelectedItem() == item) {
+                ttFileView.getSelectionModel().select(item.getParent());
+            }
             parent.getChildren().remove(item);
+
+            //update parent size
+            recalcChildrenRecursive(parent);
+
             generateTreeMap();
         } else {
             //TODO display message about removing a root node
+        }
+    }
+
+    private void recalcChildrenRecursive(TreeItem<StatItem> start) {
+        long childrenSize = start.getChildren().stream().mapToLong(c -> c.getValue().length()).sum();
+        start.setValue(start.getValue().update(childrenSize));
+        if(start.getParent() != null) {
+            recalcChildrenRecursive(start.getParent());
         }
     }
 
@@ -261,9 +277,14 @@ public class MainWindow extends VBox {
                     rectToPath.put(r, ti);
                     Platform.runLater(() -> pUsageView.getChildren().add(r));
                     r.setOnMouseClicked(eh -> {
-                        recursiveExpand(ti);
-                        ttFileView.getSelectionModel().select(ti);
-                        ttFileView.scrollTo(ttFileView.getRow(ti));
+                        if(eh.getButton() == MouseButton.PRIMARY) {
+                            recursiveExpand(ti);
+                            ttFileView.getSelectionModel().select(ti);
+                            ttFileView.scrollTo(ttFileView.getRow(ti));
+                        } else if( eh.getButton() == MouseButton.SECONDARY ) {
+                            ContextMenu mnu = ttFileView.getContextMenu();
+                            mnu.show(r,eh.getX(),eh.getY());
+                        }
                     });
                     //System.out.println("Created Rectangle for: "+ti.getValue().toString());
                     return new Pair<>(ti, r);
