@@ -6,10 +6,9 @@ import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.control.*;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
-import javafx.scene.input.ContextMenuEvent;
+import javafx.scene.control.*;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -23,10 +22,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -80,8 +80,7 @@ public class MainWindow extends VBox {
     }
 
     private static Color randomColor(Random r) {
-        Color c = Color.rgb(r.nextInt(0,255),r.nextInt(0,255),r.nextInt(0,255));
-        return c;
+        return Color.rgb(r.nextInt(0,255),r.nextInt(0,255),r.nextInt(0,255));
     }
 
     @FXML
@@ -130,10 +129,8 @@ public class MainWindow extends VBox {
         pathToRect.clear();
 
         if(ttFileView.getRoot() != null) {
-            Runnable  t = () -> {
-                generateTreeMap(new Bound(0, 0,pUsageView.getWidth(),pUsageView.
+            Runnable  t = () -> generateTreeMap(new Bound(0, 0,pUsageView.getWidth(),pUsageView.
                 getHeight()),List.of(ttFileView.getRoot()));
-            };
             if(genTreeMapThread != null && genTreeMapThread.isAlive()) {
                 genTreeMapThread.interrupt();
             }
@@ -161,7 +158,7 @@ public class MainWindow extends VBox {
     }
 
     private TreeItem<StatItem> buildTree(StatItem p) {
-        TreeItem<StatItem> me = new TreeItem(p);
+        TreeItem<StatItem> me = new TreeItem<>(p);
         Executor exec = Executors.newFixedThreadPool(8);
         FileScannerTask fst = new FileScannerTask(me,exec,(item) -> {
         });
@@ -183,7 +180,7 @@ public class MainWindow extends VBox {
         ttcName.setMaxWidth(1f * Integer.MAX_VALUE * 80);
         ttcSize.setMaxWidth(1f * Integer.MAX_VALUE * 20);
         ttcName.setCellValueFactory( vf -> new ReadOnlyStringWrapper(vf.getValue().getValue().p().getFileName().toString()) );
-        ttcSize.setCellValueFactory( vf -> new ReadOnlyObjectWrapper( vf.getValue().getValue().length()) );
+        ttcSize.setCellValueFactory( vf -> new ReadOnlyObjectWrapper<>( vf.getValue().getValue().length()) );
         ttcSize.setCellFactory(vf -> new TreeTableCell<>(){
             @Override
             protected void updateItem(Long item, boolean empty) {
@@ -247,25 +244,25 @@ public class MainWindow extends VBox {
             }
         });
 
-        packer = new RectPacker<TreeItem<StatItem>,Pair<TreeItem<StatItem>,Rectangle>>(
+        packer = new RectPacker<>(
                 t -> t.getValue().length(),
-                (ti,b) -> {
-                    Rectangle r = new Rectangle(b.x(),b.y(),b.width(),b.height());
-                    if(Files.isDirectory(ti.getValue().p())) { r.setFill(Color.TRANSPARENT); } else {
+                (ti, b) -> {
+                    Rectangle r = new Rectangle(b.x(), b.y(), b.width(), b.height());
+                    if (Files.isDirectory(ti.getValue().p())) {
+                        r.setFill(Color.TRANSPARENT);
+                    } else {
                         r.setFill(typeColor.get(getType(ti.getValue().p())));
                     }
                     r.setStroke(Color.BLACK);
                     r.setStrokeWidth(1);
-                    Tooltip tt = new Tooltip(ti.getValue().p().toString()+" ("+FileUtils.byteCountToDisplaySize(ti.getValue().length())+")");
-                    Tooltip.install(r,tt);
-                    pathToRect.put(ti,r);
-                    rectToPath.put(r,ti);
-                    Platform.runLater(() -> {
-                        pUsageView.getChildren().add(r);
-                    });
+                    Tooltip tt = new Tooltip(ti.getValue().p().toString() + " (" + FileUtils.byteCountToDisplaySize(ti.getValue().length()) + ")");
+                    Tooltip.install(r, tt);
+                    pathToRect.put(ti, r);
+                    rectToPath.put(r, ti);
+                    Platform.runLater(() -> pUsageView.getChildren().add(r));
 
                     //System.out.println("Created Rectangle for: "+ti.getValue().toString());
-                    return new Pair(ti,r);
+                    return new Pair<>(ti, r);
                 }
         );
 
@@ -371,21 +368,6 @@ public class MainWindow extends VBox {
 
     }
 
-    private void setTreeSelection(TreeItem<StatItem> ti) {
-        expandTree(ti);
-        ttFileView.scrollTo(ttFileView.getRow(ti));
-        ttFileView.getSelectionModel().select(ti);
-    }
-
-    private void expandTree(TreeItem<StatItem> selectedItem) {
-        if(selectedItem != null) {
-            expandTree(selectedItem.getParent());
-            if(!selectedItem.isLeaf()) {
-                selectedItem.setExpanded(true);
-            }
-        }
-    }
-
     String getType(Path p) {
         return FileTypeSizeCount.fromPath(p).type;
     }
@@ -402,18 +384,11 @@ public class MainWindow extends VBox {
         final Random r = new Random();
         tblStats.getItems().addAll(
             flatMapTreeItemUnwrap(ttFileView.getRoot()).filter(t -> Files.isRegularFile(t.p())).map(t -> FileTypeSizeCount.fromPath(t.p())).collect(
-                    Collectors.groupingBy(FileTypeSizeCount::type,Collectors.collectingAndThen(
-                            Collectors.reducing(
-                                    (FileTypeSizeCount a,FileTypeSizeCount b) -> new FileTypeSizeCount(a.type,(a.size()+b.size),(a.count+b.count))
-                            ), Optional::get
-                    )
-            )).values()
+                    Collectors.toMap(FileTypeSizeCount::type, Function.identity(), (FileTypeSizeCount a, FileTypeSizeCount b) -> new FileTypeSizeCount(a.type, (a.size() + b.size), (a.count + b.count)))).values()
         );
         tblStats.getItems().sort(Comparator.comparingLong(FileTypeSizeCount::size).reversed());
 
-        tblStats.getItems().forEach(i -> {
-            typeColor.put(i.type(),randomColor(r));
-        });
+        tblStats.getItems().forEach(i -> typeColor.put(i.type(),randomColor(r)));
 
     }
 
