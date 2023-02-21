@@ -78,14 +78,12 @@ public class MainWindow extends VBox {
                 return new FileTypeSizeCount(type, p.toFile().length(), 1);
             }
         }
-
-        private static Color randomColor(Random r) {
-            Color c = Color.rgb(r.nextInt(0,255),r.nextInt(0,255),r.nextInt(0,255));
-            return c;
-        }
     }
 
-
+    private static Color randomColor(Random r) {
+        Color c = Color.rgb(r.nextInt(0,255),r.nextInt(0,255),r.nextInt(0,255));
+        return c;
+    }
 
     @FXML
     public void onScanFolder(ActionEvent event) {
@@ -133,10 +131,14 @@ public class MainWindow extends VBox {
         TreeItem<TI> me = new TreeItem(p);
         Executor exec = Executors.newFixedThreadPool(8);
         FileScannerTask fst = new FileScannerTask(me,exec,(item) -> {
-            generateFileTypeLegend();
-            generateTreeMap();
         });
         exec.execute(fst);
+        me.valueProperty().addListener( (ob,ov,nv) -> {
+           if(!nv.isProcesing()) {
+               generateFileTypeLegend();
+               generateTreeMap();
+           }
+        });
         return me;
     }
 
@@ -219,7 +221,7 @@ public class MainWindow extends VBox {
                     }
                     r.setStroke(Color.BLACK);
                     r.setStrokeWidth(1);
-                    Tooltip tt = new Tooltip(ti.getValue().toString());
+                    Tooltip tt = new Tooltip(ti.getValue().toString()+" ("+FileUtils.byteCountToDisplaySize(ti.getValue().length)+")");
                     Tooltip.install(r,tt);
                     r.setOnMouseClicked( eh -> {
                         setTreeSelection(ti);
@@ -301,7 +303,7 @@ public class MainWindow extends VBox {
         );
 
         tblStats.getItems().forEach(i -> {
-            typeColor.put(i.type(),FileTypeSizeCount.randomColor(r));
+            typeColor.put(i.type(),randomColor(r));
         });
 
     }

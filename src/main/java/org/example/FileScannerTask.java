@@ -12,6 +12,7 @@ import javafx.scene.control.TreeItem;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -43,74 +44,51 @@ public class FileScannerTask extends Task<TreeItem<MainWindow.TI>> {
 
     @Override
     protected TreeItem<MainWindow.TI> call() throws Exception {
-        System.out.println("Scanning: "+myItem.getValue().toString());
+        //System.out.println("Scanning: "+myItem.getValue().toString());
         if(Files.isDirectory(myItem.getValue().p())) {
             List<TreeItem<MainWindow.TI>> children = Files.walk(myItem.getValue().p(), 1)
                     .flatMap(c -> c.equals(myItem.getValue().p()) ? Stream.empty() : Stream.of(MainWindow.TI.empty(c)))
                     .map(TreeItem::new).collect(Collectors.toList());
-            Platform.runLater(() -> {
-                myItem.getChildren().addAll(children);
-//                myItem.addEventHandler(TreeItem.childrenModificationEvent(),evt -> {
-//                    long total =myItem.getChildren().size();
-//                    long done = myItem.getChildren().stream().filter(i -> !i.getValue().isProcesing()).count();
-//                    System.out.println("Event: "+myItem.getValue().p().toString()+" "+done+"/"+total);
-//
-//                    if(myItem.getChildren().stream().noneMatch(ti -> ti.getValue().isProcesing())) {
-//                        myItem.getValue().update(myItem.getChildren().stream().mapToLong(c -> c.getValue().length()).sum());
-//                        System.out.println("Fiished: "+myItem.getValue().p().toString());
-//                    } else {
-//                        myItem.getChildren().stream().filter(ti -> ti.getValue().isProcesing()).forEach(ti -> {
-//                            System.out.println("\tWaiting on: "+ti.getValue().p());
-//                        });
-//                    }
-//                });
-            });
+            if(children.size() != 0) {
+                Platform.runLater(() -> {
+                    myItem.getChildren().addAll(children);
+                    myItem.addEventHandler(TreeItem.childrenModificationEvent(),evt -> {
+                        updateParent(myItem.getParent());
+                    });
+                });
 
-            NestedTask childrenTasks = new NestedTask(
-                    children.stream().map(
-                            ti -> new FileScannerTask(ti,executor)
-                    ).collect(Collectors.toList()),executor
-            );
+                children.stream().map(
+                        ti -> new FileScannerTask(ti,executor)
+                ).forEach(t -> executor.execute(t));
 
-            executor.execute(childrenTasks);
-        } else {
-            myItem.setValue(myItem.getValue().update(myItem.getValue().p().toFile().length()));
-            //if All my siblings are processed, update the parent to show it
-            //this isn't a great way to do it, but its the "easiest"
-            if(myItem.getParent().getChildren().stream().noneMatch(ti -> ti.getValue().isProcesing())) {
-                myItem.getParent().setValue(myItem.getParent().getValue().update(
-                        myItem.getParent().getChildren().stream().mapToLong(
-                                ti -> ti.getValue().length()
-                        ).sum()
-                ));
+            } else {
+                Platform.runLater(() -> {
+                    myItem.setValue(myItem.getValue().update(0));
+                    updateParent(myItem.getParent());
+                });
+
+
             }
+        } else {
+            Platform.runLater(() ->{
+                myItem.setValue(myItem.getValue().update(myItem.getValue().p().toFile().length()));
+                updateParent(myItem.getParent());
+            } );
         }
         return myItem;
     }
 
-    private class NestedTask<Void> extends Task<Void> {
-
-        private List<Task<FileScannerTask>> dependantTasks;
-        private int runningTasks = 0;
-        private Executor executor;
-
-        public NestedTask(List<Task<FileScannerTask>> dependants, Executor executor) {
-            dependantTasks = dependants;
-            runningTasks = dependantTasks.size();
-            this.executor = executor;
+    void updateParent(TreeItem<MainWindow.TI> parent) {
+        if(parent == null) {
+            return;
         }
-
-        @Override
-        protected Void call() throws Exception {
-            EventHandler<WorkerStateEvent> finishedHandler = (e) -> {
-                runningTasks--;
-            };
-
-            dependantTasks.stream().forEach( t -> {
-                executor.execute(t);
-            });
-
-            return null;
+        if(parent.getChildren().stream().noneMatch(ti -> ti.getValue().isProcesing())) {
+            parent.setValue(parent.getValue().update(
+                    parent.getChildren().stream().mapToLong(
+                            ti -> ti.getValue().length()
+                    ).sum()
+            ));
+            parent.getChildren().sort(Comparator.comparingLong((TreeItem<MainWindow.TI> ti) ->ti.getValue().length()).reversed());
         }
     }
 
