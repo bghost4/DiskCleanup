@@ -258,9 +258,6 @@ public class MainWindow extends VBox {
                     r.setStrokeWidth(1);
                     Tooltip tt = new Tooltip(ti.getValue().p().toString()+" ("+FileUtils.byteCountToDisplaySize(ti.getValue().length())+")");
                     Tooltip.install(r,tt);
-                    r.setOnMouseClicked( eh -> {
-                        setTreeSelection(ti);
-                    });
                     pathToRect.put(ti,r);
                     rectToPath.put(r,ti);
                     Platform.runLater(() -> {
@@ -284,6 +281,10 @@ public class MainWindow extends VBox {
             if(nv != null) {
                 pathToRect.get(nv).toFront();
                 pathToRect.get(nv).setStroke(Color.RED);
+                if(nv.getParent() != null) {
+                    nv.getParent().setExpanded(true);
+                }
+                ttFileView.scrollTo(ttFileView.getRow(nv));
             }
         });
 
@@ -296,7 +297,7 @@ public class MainWindow extends VBox {
                         if(r != null ) {
                             r.setStroke(Color.YELLOW);
                         } else {
-                            System.out.println("No Rectangle for: "+ti.toString());
+                            System.out.println("No Rectangle for: "+ ti);
                         }
                     }
             );

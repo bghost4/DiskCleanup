@@ -14,7 +14,7 @@ import java.util.stream.Stream;
 
 public class FileScannerTask extends Task<TreeItem<StatItem>> {
 
-    private TreeItem<StatItem> myItem;
+    private final TreeItem<StatItem> myItem;
     Executor executor;
 
     final Consumer<TreeItem<StatItem>> whenDoneFunc;
