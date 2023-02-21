@@ -1,5 +1,6 @@
 package org.example;
 
+import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.event.ActionEvent;
@@ -48,6 +49,8 @@ public class MainWindow extends VBox {
     private TableColumn<FileTypeSizeCount,Long> tcCount,tcSize;
     @FXML
     private TableColumn<FileTypeSizeCount,String> tcType;
+
+    private Thread genTreeMapThread;
 
     RectPacker<TreeItem<TI>,Pair<TreeItem<TI>,Rectangle>> packer;
     record Pair<A,B> (A a,B b) { }
@@ -106,12 +109,21 @@ public class MainWindow extends VBox {
         pathToRect.clear();
 
         if(ttFileView.getRoot() != null) {
-            generateTreeMap(new Bound(0, 0, pUsageView.getWidth(), pUsageView.getHeight()),List.of(ttFileView.getRoot()));
+            Runnable  t = () -> {
+                generateTreeMap(new Bound(0, 0,pUsageView.getWidth(),pUsageView.
+                getHeight()),List.of(ttFileView.getRoot()));
+            };
+            if(genTreeMapThread != null && genTreeMapThread.isAlive()) {
+                genTreeMapThread.interrupt();
+            }
+            genTreeMapThread = new Thread(t);
+            genTreeMapThread.start();
         }
 
     }
 
     private void generateTreeMap(Bound b,List<TreeItem<TI>> items) {
+            if(Thread.currentThread().isInterrupted()) { return; }
             packer.pack(b, items).forEach(
                     p -> {
                         if(Files.isDirectory(p.a.getValue().p) && p.a.getChildren().size() > 0) {
@@ -228,7 +240,10 @@ public class MainWindow extends VBox {
                     });
                     pathToRect.put(ti,r);
                     rectToPath.put(r,ti);
-                    pUsageView.getChildren().add(r);
+                    Platform.runLater(() -> {
+                        pUsageView.getChildren().add(r);
+                    });
+
                     //System.out.println("Created Rectangle for: "+ti.getValue().toString());
                     return new Pair(ti,r);
                 }
@@ -301,6 +316,7 @@ public class MainWindow extends VBox {
                     )
             )).values()
         );
+        tblStats.getItems().sort(Comparator.comparingLong(FileTypeSizeCount::size).reversed());
 
         tblStats.getItems().forEach(i -> {
             typeColor.put(i.type(),randomColor(r));
