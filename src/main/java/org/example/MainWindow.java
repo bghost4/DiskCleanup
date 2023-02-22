@@ -225,25 +225,27 @@ public class MainWindow extends VBox {
         }
         me.setExpanded(true);
 
+
+
         NestedTask<FileScannerTask> nt = new NestedTask<>(exec,
                 me.getChildren().stream().filter(ti -> Files.isDirectory(ti.getValue().p()))
                         .map(FileScannerTask::new).collect(Collectors.toList()));
+
+        nt.getDependants().forEach(fst -> fst.setOnSucceeded(eh -> {
+            TreeItem<StatItem> childItem = fst.getParent();
+            try {
+                List<TreeItem<StatItem>> subChildren = fst.get();
+                long total = subChildren.stream().mapToLong(i -> i.getValue().length() ).sum();
+                childItem.setValue(childItem.getValue().update(total));
+                childItem.getChildren().addAll(subChildren);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            } catch (ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        }));
+
         nt.setOnSucceeded(eh -> {
-
-            nt.getDependants().forEach(fst -> {
-                TreeItem<StatItem> childItem = fst.getParent();
-                try {
-                    List<TreeItem<StatItem>> subChildren = fst.get();
-                    long total = subChildren.stream().mapToLong(i -> i.getValue().length() ).sum();
-                    childItem.setValue(childItem.getValue().update(total));
-                    childItem.getChildren().addAll(subChildren);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                } catch (ExecutionException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-
             me.getChildren().sort(Comparator.comparingLong((TreeItem<StatItem> ti) -> ti.getValue().length()).reversed());
 
             me.setValue(me.getValue().update(
