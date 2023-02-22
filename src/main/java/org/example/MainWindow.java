@@ -3,6 +3,8 @@ package org.example;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.concurrent.ScheduledService;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -16,6 +18,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeType;
 import javafx.stage.DirectoryChooser;
+import javafx.util.Duration;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 
@@ -26,9 +29,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -60,12 +61,39 @@ public class MainWindow extends VBox {
     @FXML
     private TableColumn<FileTypeSizeCount,String> tcType;
 
+    @FXML
+    private ProgressBar pbMemUsage;
+
     private Thread genTreeMapThread;
 
     private Double notSelectedOpacity = 0.35;
 
     //TODO make this a prefrence
     private final Executor exec = Executors.newFixedThreadPool(2);
+
+
+    private final ScheduledService<Void> svc = new ScheduledService<Void>() {
+        @Override
+        protected Task<Void> createTask() {
+            return new Task<>() {
+                @Override
+                protected Void call() throws Exception {
+                    double percent = 1 - ((double)Runtime.getRuntime().freeMemory() / (double)Runtime.getRuntime().totalMemory());
+                    String text = String.format(
+                            "%s Free of %s",
+                            FileUtils.byteCountToDisplaySize(Runtime.getRuntime().freeMemory()),
+                            FileUtils.byteCountToDisplaySize(Runtime.getRuntime().totalMemory())
+                    );
+                    Platform.runLater(() -> {
+                        pbMemUsage.setProgress(percent);
+                        lStatus.setText(text);
+                    });
+                    return null;
+                }
+            };
+        }
+    };
+
 
     RectPacker<TreeItem<StatItem>,Pair<TreeItem<StatItem>,Rectangle>> packer;
 
@@ -379,6 +407,10 @@ public class MainWindow extends VBox {
                 updateRects( t-> true,(i,r) -> r.setOpacity(1),(i,r) -> r.setOpacity(1));
             }
         });
+
+        svc.setPeriod(Duration.seconds(5));
+        svc.start();
+
     }
 
     boolean isChildOf(TreeItem<StatItem> haystack,TreeItem<StatItem> needle) {

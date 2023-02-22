@@ -4,11 +4,13 @@
 <?import javafx.scene.control.Menu?>
 <?import javafx.scene.control.MenuBar?>
 <?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TreeTableColumn?>
 <?import javafx.scene.control.TreeTableView?>
+<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Pane?>
 <?import javafx.scene.layout.VBox?>
 
@@ -61,6 +63,11 @@
             <Pane fx:id="pUsageView" prefHeight="200.0" prefWidth="200.0" />
          </items>
       </SplitPane>
-      <Label fx:id="lStatus" text="Status Label" />
+      <HBox prefHeight="100.0" prefWidth="200.0">
+         <children>
+            <Label fx:id="lStatus" text="Status Label" />
+            <ProgressBar fx:id="pbMemUsage" prefWidth="200.0" progress="0.0" />
+         </children>
+      </HBox>
    </children>
 </fx:root>
