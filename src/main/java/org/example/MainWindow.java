@@ -26,6 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
@@ -62,6 +63,9 @@ public class MainWindow extends VBox {
     private Thread genTreeMapThread;
 
     private Double notSelectedOpacity = 0.35;
+
+    //TODO make this a prefrence
+    private final Executor exec = Executors.newFixedThreadPool(2);
 
     RectPacker<TreeItem<StatItem>,Pair<TreeItem<StatItem>,Rectangle>> packer;
 
@@ -179,19 +183,51 @@ public class MainWindow extends VBox {
         return new Bound(r.getX(),r.getY(),r.getWidth(),r.getHeight());
     }
 
-    private TreeItem<StatItem> buildTree(StatItem p) {
-        TreeItem<StatItem> me = new TreeItem<>(p);
-        Executor exec = Executors.newFixedThreadPool(8);
-        FileScannerTask fst = new FileScannerTask(me,exec,(item) -> {
-        });
-        exec.execute(fst);
-        me.valueProperty().addListener( (ob,ov,nv) -> {
-           if(!nv.isProcesing()) {
-               generateFileTypeLegend();
-               generateTreeMap();
-           }
-        });
+    private TreeItem<StatItem> buildTree(StatItem si) {
+        TreeItem<StatItem> me = new TreeItem<>(si);
+
+        try {
+            me.getChildren().addAll(Files.walk(si.p(), 1)
+                    .filter(p -> !p.equals(si.p()))
+                    .map(p -> Files.isDirectory(p) ? new TreeItem<>(StatItem.empty(p)) : new TreeItem<>(new StatItem(p, false, p.toFile().length()))).toList());
+
+        } catch(IOException e) {
+            //todo say something useful
+            e.printStackTrace();
+        }
         me.setExpanded(true);
+
+        NestedTask<FileScannerTask> nt = new NestedTask<>(exec,
+                me.getChildren().stream().filter(ti -> Files.isDirectory(ti.getValue().p()))
+                        .map(FileScannerTask::new).collect(Collectors.toList()));
+        nt.setOnSucceeded(eh -> {
+
+            nt.getDependants().forEach(fst -> {
+                TreeItem<StatItem> childItem = fst.getParent();
+                try {
+                    List<TreeItem<StatItem>> subChildren = fst.get();
+                    long total = subChildren.stream().mapToLong(i -> i.getValue().length() ).sum();
+                    childItem.setValue(childItem.getValue().update(total));
+                    childItem.getChildren().addAll(subChildren);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                } catch (ExecutionException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+
+            me.getChildren().sort(Comparator.comparingLong((TreeItem<StatItem> ti) -> ti.getValue().length()).reversed());
+
+            me.setValue(me.getValue().update(
+                    me.getChildren().stream().mapToLong((TreeItem<StatItem> i) -> i.getValue().length()).sum()
+            ));
+
+            generateFileTypeLegend();
+            generateTreeMap();
+
+        });
+        exec.execute(nt);
+
         return me;
     }
 
@@ -276,7 +312,7 @@ public class MainWindow extends VBox {
                         r.setPickOnBounds(false); //hopefully keeps directories from catching mouse events
                     } else {
                         r.setFill(typeColor.get(getType(ti.getValue().p())));
-                        Tooltip tt = new Tooltip(ttFileView.getRoot().getValue().p().relativize(ti.getValue().p()).toString() + " (" + FileUtils.byteCountToDisplaySize(ti.getValue().length()) + ")");
+                        Tooltip tt = new Tooltip(ttFileView.getRoot().getValue().p().relativize(ti.getValue().p()) + " (" + FileUtils.byteCountToDisplaySize(ti.getValue().length()) + ")");
                         Tooltip.install(r, tt);
                         r.setStrokeWidth(1);
                         r.setStroke(Color.BLACK);
