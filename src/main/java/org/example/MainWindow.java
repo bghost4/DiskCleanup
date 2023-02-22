@@ -14,6 +14,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.StrokeType;
 import javafx.stage.DirectoryChooser;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.*;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -59,8 +61,9 @@ public class MainWindow extends VBox {
 
     private Thread genTreeMapThread;
 
+    private Double notSelectedOpacity = 0.35;
+
     RectPacker<TreeItem<StatItem>,Pair<TreeItem<StatItem>,Rectangle>> packer;
-    private boolean rectPaintForced;
 
     record Pair<A,B> (A a,B b) { }
 
@@ -267,6 +270,7 @@ public class MainWindow extends VBox {
                 t -> t.getValue().length(),
                 (ti, b) -> {
                     Rectangle r = new Rectangle(b.x(), b.y(), b.width(), b.height());
+
                     if (Files.isDirectory(ti.getValue().p())) {
                         r.setFill(Color.TRANSPARENT);
                         r.setPickOnBounds(false); //hopefully keeps directories from catching mouse events
@@ -274,9 +278,11 @@ public class MainWindow extends VBox {
                         r.setFill(typeColor.get(getType(ti.getValue().p())));
                         Tooltip tt = new Tooltip(ttFileView.getRoot().getValue().p().relativize(ti.getValue().p()).toString() + " (" + FileUtils.byteCountToDisplaySize(ti.getValue().length()) + ")");
                         Tooltip.install(r, tt);
+                        r.setStrokeWidth(1);
+                        r.setStroke(Color.BLACK);
+                        r.setStrokeType(StrokeType.INSIDE);
                     }
-                    r.setStroke(Color.BLACK);
-                    r.setStrokeWidth(1);
+
                     pathToRect.put(ti, r);
                     rectToPath.put(r, ti);
                     Platform.runLater(() -> pUsageView.getChildren().add(r));
@@ -315,11 +321,8 @@ public class MainWindow extends VBox {
 //                pathToRect.get(nv).toFront();
 //                pathToRect.get(nv).setStroke(Color.RED);
 
-                if(this.rectPaintForced) {
-                    resetRectFill();
-                }
 
-                forceRectFill(i -> isChildOf(nv,i),Color.LIGHTGRAY);
+                updateRects((ti -> isChildOf(nv,ti)), (t, r) -> r.setOpacity(1), (t, r) -> r.setOpacity(notSelectedOpacity));
 
                 if(nv.getParent() != null) {
                     nv.getParent().setExpanded(true);
@@ -334,9 +337,10 @@ public class MainWindow extends VBox {
         tblStats.getSelectionModel().selectedItemProperty().addListener((ob,ov,nv) -> {
             ttFileView.getSelectionModel().clearSelection(); //clear selection from Tree View
             if(nv != null ) {
-                forceRectFill(ti -> getType(ti).equals(nv.type()), Color.LIGHTGRAY);
+                //forceRectFill(ti -> getType(ti).equals(nv.type()), Color.LIGHTGRAY);
+                updateRects(t -> getType(t).equals(nv.type()),(i,r) -> r.setOpacity(1),(i,r) -> r.setOpacity(notSelectedOpacity));
             } else {
-                resetRectFill();
+                updateRects( t-> true,(i,r) -> r.setOpacity(1),(i,r) -> r.setOpacity(1));
             }
         });
     }
@@ -379,35 +383,17 @@ public class MainWindow extends VBox {
         ttFileView.setContextMenu(ctx);
     }
 
-    private void forceRectFill(Predicate<TreeItem<StatItem>> exclude,javafx.scene.paint.Paint paint) {
-        //TODO create an upper level thread executor pool to run the tasks
-        this.rectPaintForced = true;
-        //Thread t = new Thread( () ->
-            flatMapTreeItem(ttFileView.getRoot())
-                    .filter(ti -> !Files.isDirectory(ti.getValue().p())) //Leave directories out of this they are special
-                    .forEach(ti -> {
-                        Rectangle r = pathToRect.get(ti);
-                        javafx.scene.paint.Paint p;
-                        if(exclude.test(ti)) {
-                          p = typeColor.get(FileTypeSizeCount.fromPath(ti.getValue().p()).type());
-                        }  else { p =  paint; }
-                        if(r != null) {
-                            //Platform.runLater( () -> r.setFill(p) );
-                            r.setFill(p);
-                        }
-                    });
-//        );
-//        t.setDaemon(true);
-//        t.start();
-    }
-
-    private void resetRectFill() {
-        this.rectPaintForced = false;
+    private void updateRects(Predicate<TreeItem<StatItem>> matcher, BiConsumer<TreeItem<StatItem>,Rectangle> match, BiConsumer<TreeItem<StatItem>,Rectangle> nomatch) {
         flatMapTreeItem(ttFileView.getRoot())
+                .filter(ti -> !Files.isDirectory(ti.getValue().p())) //Leave directories out of this they are special
                 .forEach(ti -> {
                     Rectangle r = pathToRect.get(ti);
-                    if( r != null) {
-                        r.setFill(typeColor.get(getType(ti.getValue().p())));
+                    if(r != null ) {
+                        if (matcher.test(ti)) {
+                            match.accept(ti, r);
+                        } else {
+                            nomatch.accept(ti,r);
+                        }
                     }
                 });
     }
