@@ -166,7 +166,15 @@ public class TreeMap extends StackPane {
             }
         });
 
-        rectangleUpdater.setLookupFunction(ti -> Optional.ofNullable(pathToRect.get(ti)));
+        rectangleUpdater.setLookupFunction(ti ->
+                {
+                    Optional<Rectangle> or = Optional.ofNullable(pathToRect.get(ti));
+                    if(or.isEmpty()) {
+                        System.err.println("Rectangle Lookup for: "+ti.getValue().p());
+                    }
+                    return or;
+                }
+        );
 
         rectangleCreator.setOnSucceeded(eh -> {
             treeMapPacker.restart();

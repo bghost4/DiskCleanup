@@ -64,6 +64,9 @@ public class RectangleUpdateService extends Service<Void>{
                                     break;
                                 }
                             }
+
+                            if(items.size() == 0) { return null; }
+
                             Platform.runLater(() -> {
                                 List<Pair<Rectangle,Bound>> cp = new ArrayList<>(items);
                                 System.out.println("updated "+cp.size()+" Rectangles");
