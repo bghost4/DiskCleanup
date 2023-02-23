@@ -1,5 +1,5 @@
-##Disk Cleanup Tool
-because we can, not because we should
+## Disk Cleanup Tool
+### because we can, not because we should
 this project was done as a mental and program excersize implementing the functionality
 of some disk usage tools like WinDirStat and QDirStat
 
@@ -9,3 +9,11 @@ the treemap was interesting to implement and can be found in the RectPacker clas
 
 This project depends on Java17 and apache commons.io ( for turning # bytes into a human-readable format )
 
+### Build Requirements
+    Requirements: java 17 jdk
+
+### Launch Instructions
+    ./gradlew run
+
+See Issues Page for Bugs: https://github.com/bghost4/DiskCleanup/issues
+    
