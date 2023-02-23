@@ -1,6 +1,5 @@
 package org.example;
 
-import javafx.beans.binding.Bindings;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
@@ -22,7 +21,7 @@ public class FileNameStrategy extends StrategyBase {
 
     private Pattern regexPattern;
 
-    ToggleGroup tglGroup = new ToggleGroup();
+    final ToggleGroup tglGroup = new ToggleGroup();
 
     public FileNameStrategy() {
         VBox vb = new VBox();

@@ -41,7 +41,7 @@ public class FindDuplicatesUI extends VBox {
         if(searchContext.get() != null) {
             TreeItem<StatItem> root = searchContext.get().getRoot();
             List<TreeItem<StatItem>> result = TreeItemUtils.flatMapTreeItem(root).filter( ti ->
-                    cboStrategy.getValue().getPredicate().test((TreeItem<org.example.StatItem>)ti)
+                    cboStrategy.getValue().getPredicate().test(ti)
             ).toList();
             if(treeMap != null) {
                 treeMap.setSelection(result);
@@ -50,7 +50,7 @@ public class FindDuplicatesUI extends VBox {
         }
     }
 
-    private SimpleObjectProperty<TreeTableView<StatItem>> searchContext = new SimpleObjectProperty<>();
+    private final SimpleObjectProperty<TreeTableView<StatItem>> searchContext = new SimpleObjectProperty<>();
 
     public TreeTableView<StatItem> getSearchContext() {
         return searchContext.get();
