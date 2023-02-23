@@ -1,5 +1,7 @@
 package org.example;
 
+import com.sun.source.tree.Tree;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -15,12 +17,10 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.*;
+import org.w3c.dom.css.Rect;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -28,6 +28,7 @@ import java.util.stream.Stream;
 public class TreeMap extends StackPane {
     private final HashMap<TreeItem<StatItem>,Rectangle> pathToRect = new HashMap<>();
     private final HashMap<Rectangle,TreeItem<StatItem>> rectToPath = new HashMap<>();
+
     private final RectPacker<TreeItem<StatItem>> packer;
 
     private final ObservableList<TreeItem<StatItem>> selection = FXCollections.observableArrayList();
@@ -38,6 +39,8 @@ public class TreeMap extends StackPane {
 
     private final SimpleObjectProperty<TreeItem<StatItem>> context = new SimpleObjectProperty<>();
     private final SimpleObjectProperty<BiConsumer<MouseEvent,TreeItem<StatItem>>> mouseHandler = new SimpleObjectProperty<>();
+
+    private final RectangleUpdateService rectangleUpdater = new RectangleUpdateService();
 
     private final EventHandler<MouseEvent> defaultMouseHandler = (mouseEvent) -> {
         if(mouseEvent.getSource() instanceof Rectangle rect) {
@@ -53,35 +56,17 @@ public class TreeMap extends StackPane {
 
     private final ProgressIndicator spinnymajig = new ProgressIndicator();
 
-    private final Service<Stream<Rectangle>> treeMapGenerator = new Service<>() {
+
+
+    private final Service<List<Pair<TreeItem<StatItem>,Bound>>> treeMapPacker = new Service<List<Pair<TreeItem<StatItem>,Bound>>>() {
         @Override
-        protected Task<Stream<Rectangle>> createTask() {
-            return new Task<Stream<Rectangle>>() {
+        protected Task<List<Pair<TreeItem<StatItem>,Bound>>> createTask() {
+            return new Task<List<Pair<TreeItem<StatItem>,Bound>>>() {
                 @Override
-                protected Stream<Rectangle> call() throws Exception {
-                    Bound parent = new Bound(0, 0,pUsage.getWidth(),pUsage.getHeight());
-                    return recurse(parent,context.get())
-                            .map(
-                            (pair) -> {
-                                TreeItem<StatItem> ti = pair.a();
-                                Bound b = pair.b();
-
-                                Rectangle r = new Rectangle(b.x(), b.y(), b.width(), b.height());
-
-                                r.setFill(typePainter.get().apply(TreeItemUtils.getType(ti)));
-                                Tooltip tt = new Tooltip(TreeItemUtils.relativize(context.get(),ti) + " (" + TreeItemUtils.getFriendlySize(ti) + ")");
-                                Tooltip.install(r, tt);
-                                r.setStrokeWidth(1);
-                                r.setStroke(Color.BLACK);
-                                r.setStrokeType(StrokeType.INSIDE);
-                                r.addEventFilter(MouseEvent.ANY,defaultMouseHandler);
-
-                                pathToRect.put(ti, r);
-                                rectToPath.put(r, ti);
-
-                                return r;
-                            }
-                    );
+                protected List<Pair<TreeItem<StatItem>, Bound>> call() throws Exception {
+                    System.out.println("TreeMapPacker Started");
+                    Bound parent = new Bound(0, 0, pUsage.getWidth(), pUsage.getHeight());
+                    return recurse(parent, context.get()).toList();
                 }
 
                 protected Stream<Pair<TreeItem<StatItem>,Bound>> recurse(Bound space, TreeItem<StatItem> item) {
@@ -95,9 +80,41 @@ public class TreeMap extends StackPane {
             };
         }
     };
+
+    private final Service<Void> rectangleCreator = new Service<>() {
+        @Override
+        protected Task<Void> createTask() {
+            return new Task<Void>() {
+                @Override
+                protected Void call() throws Exception {
+                    System.out.println("Retangle Creator Started");
+                    List<TreeItem<StatItem>> items = TreeItemUtils.flatMapTreeItem(context.getValue()).filter(TreeItem::isLeaf).toList();
+
+                    items.forEach( ti -> {
+                        Rectangle r = new Rectangle();
+                        r.setFill(typePainter.get().apply(TreeItemUtils.getType(ti)));
+                        r.setStrokeType(StrokeType.INSIDE);
+                        r.setStrokeWidth(1);
+                        r.addEventFilter(MouseEvent.ANY,defaultMouseHandler);
+                        pathToRect.put(ti,r);
+                        rectToPath.put(r,ti);
+                        }
+                    );
+
+                    System.out.println("Created "+items.size()+" Rectangles");
+
+                    Platform.runLater(() ->  pUsage.getChildren().setAll(rectToPath.keySet()) );
+
+                    return null;
+                }
+
+                };
+        }
+    };
     private Path shader;
 
 
+    //Complete Regeneration of treeMap
     private void generateTreeMap(TreeItem<StatItem> root) {
         pUsage.getChildren().clear();
         rectToPath.clear();
@@ -105,12 +122,12 @@ public class TreeMap extends StackPane {
         if(shader != null) { getChildren().remove(shader); shader = null; }
 
         if(root != null) {
-            if(treeMapGenerator.isRunning()) {
-                treeMapGenerator.cancel();
+            if(rectangleCreator.isRunning()) {
+                rectangleCreator.cancel();
             } else {
                 getChildren().add(spinnymajig);
             }
-            treeMapGenerator.restart();
+            rectangleCreator.restart();
         }
     }
 
@@ -127,21 +144,38 @@ public class TreeMap extends StackPane {
         widthProperty().addListener( (ob,ov,nv) -> {
             System.out.println("Width Changed: "+nv);
                 pUsage.setPrefWidth(nv.doubleValue()-5);
-            refresh();
+            treeMapPacker.restart();
         });
 
         heightProperty().addListener( (ob,ov,nv) -> {
             System.out.println("Height Changed: "+nv);
                 pUsage.setPrefHeight(nv.doubleValue()-5);
-            refresh();
+            treeMapPacker.restart();
         });
 
-        treeMapGenerator.setOnSucceeded(eh -> {
-            System.out.println("Tree Map is Generated");
-            treeMapGenerator.getValue().forEach(pair -> {
-                pUsage.getChildren().add(pair);
-            });
-            getChildren().remove(spinnymajig);
+        context.addListener((ob,ov,nv) -> {
+            System.out.println("Context Changed: "+nv.getValue().p());
+            if(ov == null) {
+                generateTreeMap(nv);
+            } else {
+                if(TreeItemUtils.flatMapTreeItem(ov).anyMatch(ti -> ti == nv)) {
+                    treeMapPacker.restart();
+                } else {
+                    generateTreeMap(nv);
+                }
+            }
+        });
+
+        rectangleUpdater.setLookupFunction(ti -> Optional.ofNullable(pathToRect.get(ti)));
+
+        rectangleCreator.setOnSucceeded(eh -> {
+            treeMapPacker.restart();
+        });
+
+        treeMapPacker.setOnSucceeded(eh -> {
+            System.out.println("Tree Map is repacked");
+            rectangleUpdater.setPackingOrder(treeMapPacker.getValue());
+            //getChildren().remove(spinnymajig);
         });
 
         context.addListener((ob,ov,nv) -> {
