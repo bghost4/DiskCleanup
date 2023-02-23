@@ -1,6 +1,5 @@
 package org.example;
 
-import com.sun.source.tree.Tree;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -10,19 +9,18 @@ import javafx.event.EventHandler;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.TreeItem;
-import javafx.scene.effect.BlendMode;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.*;
-import org.w3c.dom.css.Rect;
 
-import java.nio.file.Files;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -38,12 +36,19 @@ public class TreeMap extends StackPane {
 
     private final Pane pUsage = new Pane();
 
-
     private final SimpleObjectProperty<TreeItem<StatItem>> context = new SimpleObjectProperty<>();
-    private final SimpleObjectProperty<EventHandler<MouseEvent>> mouseHandler = new SimpleObjectProperty<>();
+    private final SimpleObjectProperty<BiConsumer<MouseEvent,TreeItem<StatItem>>> mouseHandler = new SimpleObjectProperty<>();
 
-    private EventHandler<MouseEvent> clickHandler  = (mouseEvent) -> {
-        if(mouseHandler.get() != null) { mouseHandler.get().handle(mouseEvent); }
+    private final EventHandler<MouseEvent> defaultMouseHandler = (mouseEvent) -> {
+        if(mouseEvent.getSource() instanceof Rectangle rect) {
+            TreeItem<StatItem> item = rectToPath.get(rect);
+            if(item != null) {
+                if (mouseHandler.get() != null) {
+                    mouseHandler.get().accept(mouseEvent, item);
+                    mouseEvent.consume();
+                }
+            }
+        }
     };
 
     private final ProgressIndicator spinnymajig = new ProgressIndicator();
@@ -69,6 +74,7 @@ public class TreeMap extends StackPane {
                                 r.setStrokeWidth(1);
                                 r.setStroke(Color.BLACK);
                                 r.setStrokeType(StrokeType.INSIDE);
+                                r.addEventFilter(MouseEvent.ANY,defaultMouseHandler);
 
                                 pathToRect.put(ti, r);
                                 rectToPath.put(r, ti);
@@ -96,6 +102,7 @@ public class TreeMap extends StackPane {
         pUsage.getChildren().clear();
         rectToPath.clear();
         pathToRect.clear();
+        if(shader != null) { getChildren().remove(shader); shader = null; }
 
         if(root != null) {
             if(treeMapGenerator.isRunning()) {
@@ -160,47 +167,23 @@ public class TreeMap extends StackPane {
     }
 
     public void setSelection(TreeItem<StatItem> nv) {
-        //Create an overlay that goes in the stackpane that somehow obscures any item not selected
-        if(this.shader != null) {
-            getChildren().remove(this.shader);
-        }
-        this.shader = createShader(pathToRect.get(nv));
-        getChildren().add(shader);
+        selection.clear();
+        selection.addAll(
+            TreeItemUtils.flatMapTreeItem(nv).toList()
+        );
+        createShaderForSelection();
     }
 
     public void setSelection(Predicate<TreeItem<StatItem>> predicate) {
-
-        if(this.shader != null) {
-            getChildren().remove(this.shader);
-        }
-
-        Path p = new Path();
-
-        p.setFill(Color.BLACK);
-        p.setStroke(null);
-        p.setOpacity(0.75);
-        p.setFillRule(FillRule.EVEN_ODD);
-
-        p.getElements().addAll(createRect(0,0,pUsage.getWidth(),pUsage.getHeight(),false));
-
-
-
-        this.shader = p;
-        getChildren().add(shader);
-
+       selection.clear();
+       selection.addAll(
+        pathToRect.keySet().stream().filter(predicate).toList()
+       );
+       createShaderForSelection();
     }
 
-    public void setSelection(Collection<TreeItem<StatItem>> itemsToSelect) {
-        Path p = new Path();
-
-        p.setFill(Color.BLACK);
-        p.setStroke(null);
-        p.setOpacity(0.75);
-        p.setFillRule(FillRule.EVEN_ODD);
-
-        p.getElements().addAll(createRect(0,0,pUsage.getWidth(),pUsage.getHeight(),false));
-
-
+    List<PathElement> createRect(Rectangle r,boolean remove) {
+        return createRect(r.getX(),r.getY(),r.getWidth(),r.getHeight(),remove);
     }
 
     List<PathElement> createRect(double x,double y, double w, double h,boolean remove) {
@@ -221,17 +204,27 @@ public class TreeMap extends StackPane {
         }
     }
 
-    Path createShader(Rectangle selected) {
+    private Path createShaderForSelection() {
         Path p = new Path();
 
-        p.setFill(Color.BLACK);
+        p.setFill(Color.WHITE);
         p.setStroke(null);
         p.setOpacity(0.75);
         p.setFillRule(FillRule.EVEN_ODD);
 
         p.getElements().addAll(createRect(0,0,pUsage.getWidth(),pUsage.getHeight(),false));
-        p.getElements().addAll(createRect(selected.getX(),selected.getY(),selected.getWidth(),selected.getHeight(),true));
+        selection.stream().flatMap(ti -> Optional.ofNullable(pathToRect.get(ti)).stream()).forEach(r -> {
+            p.getElements().addAll(createRect(r,true));
+        });
 
+        //wish there was a way to make path transparent to mouse events
+        p.setMouseTransparent(true);
+
+        if(shader != null) {
+            getChildren().remove(shader);
+        }
+        shader = p;
+        getChildren().add(shader);
         return p;
     }
 
@@ -258,23 +251,15 @@ public class TreeMap extends StackPane {
         return context;
     }
 
-    public EventHandler<MouseEvent> getMouseHandler() {
+    public BiConsumer<MouseEvent,TreeItem<StatItem>> getMouseHandler() {
         return mouseHandler.get();
     }
 
-    public SimpleObjectProperty<EventHandler<MouseEvent>> mouseHandlerProperty() {
+    public SimpleObjectProperty<BiConsumer<MouseEvent,TreeItem<StatItem>>> mouseHandlerProperty() {
         return mouseHandler;
     }
 
-    public void setMouseHandler(EventHandler<MouseEvent> mouseHandler) {
+    public void setMouseHandler(BiConsumer<MouseEvent,TreeItem<StatItem>> mouseHandler) {
         this.mouseHandler.set(mouseHandler);
-    }
-
-    public EventHandler<MouseEvent> getClickHandler() {
-        return clickHandler;
-    }
-
-    public void setClickHandler(EventHandler<MouseEvent> clickHandler) {
-        this.clickHandler = clickHandler;
     }
 }

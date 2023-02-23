@@ -11,6 +11,8 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.*;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -319,16 +321,22 @@ public class MainWindow extends VBox {
 
         pUsageView.getChildren().add(treeMap);
 
+        treeMap.setMouseHandler( (mouseEvent,ti) -> {
+            if(mouseEvent.getEventType() == MouseEvent.MOUSE_CLICKED) {
+                TreeItemUtils.recursiveExpand(ti);
+                ttFileView.getSelectionModel().select(ti);
+                ttFileView.scrollTo(ttFileView.getRow(ti));
+
+                if( mouseEvent.getButton() == MouseButton.SECONDARY ) {
+                    ContextMenu mnu = ttFileView.getContextMenu();
+                    mnu.show(treeMap,mouseEvent.getScreenX(),mouseEvent.getScreenY());
+                }
+            }
+        });
+
         //Platform.runLater(() -> pUsageView.getChildren().add(r));
 //        r.setOnMouseClicked(eh -> {
-//            recursiveExpand(ti);
-//            ttFileView.getSelectionModel().select(ti);
-//            ttFileView.scrollTo(ttFileView.getRow(ti));
 //
-//            if( eh.getButton() == MouseButton.SECONDARY ) {
-//                ContextMenu mnu = ttFileView.getContextMenu();
-//                mnu.show(r,eh.getScreenX(),eh.getScreenY());
-//            }
 //        });
 
     }
