@@ -66,7 +66,11 @@ public class MainWindow extends VBox {
     private Double notSelectedOpacity = 0.35;
 
     //TODO make this a prefrence
-    private final Executor exec = Executors.newFixedThreadPool(2);
+    private final Executor exec = Executors.newFixedThreadPool(2, r -> {
+        Thread t = Executors.defaultThreadFactory().newThread(r);
+        t.setDaemon(true);
+        return t;
+    });
 
     private final ScheduledService<Void> svc = new ScheduledService<Void>() {
         @Override
@@ -397,9 +401,7 @@ public class MainWindow extends VBox {
                     throw new RuntimeException(e);
                 }
             };
-            Thread openThread = new Thread(r);
-            openThread.start();
-
+            exec.execute(r);
     }
 
     public static String getType(Path p) {
