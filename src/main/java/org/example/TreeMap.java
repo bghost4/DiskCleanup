@@ -1,6 +1,5 @@
 package org.example;
 
-import com.sun.source.tree.Tree;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -11,7 +10,6 @@ import javafx.concurrent.Task;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.control.ProgressIndicator;
-import javafx.scene.control.Tooltip;
 import javafx.scene.control.TreeItem;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
@@ -19,7 +17,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.*;
-import org.w3c.dom.css.Rect;
 
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -58,22 +55,22 @@ public class TreeMap extends StackPane {
         }
     };
 
-    private final Service<List<Pair<TreeItem<StatItem>,Bound>>> treeMapPacker = new Service<List<Pair<TreeItem<StatItem>,Bound>>>() {
+    private final Service<List<Pair<TreeItem<StatItem>,Bound>>> treeMapPacker = new Service<>() {
         @Override
-        protected Task<List<Pair<TreeItem<StatItem>,Bound>>> createTask() {
-            return new Task<List<Pair<TreeItem<StatItem>,Bound>>>() {
+        protected Task<List<Pair<TreeItem<StatItem>, Bound>>> createTask() {
+            return new Task<List<Pair<TreeItem<StatItem>, Bound>>>() {
                 @Override
-                protected List<Pair<TreeItem<StatItem>, Bound>> call() throws Exception {
+                protected List<Pair<TreeItem<StatItem>, Bound>> call() {
                     System.out.println("TreeMapPacker Started");
                     Bound parent = new Bound(0, 0, pUsage.getWidth(), pUsage.getHeight());
                     return recurse(parent, context.get()).toList();
                 }
 
-                protected Stream<Pair<TreeItem<StatItem>,Bound>> recurse(Bound space, TreeItem<StatItem> item) {
-                    if(item.isLeaf()) {
-                        return packer.pack(space,Stream.of(item));
+                protected Stream<Pair<TreeItem<StatItem>, Bound>> recurse(Bound space, TreeItem<StatItem> item) {
+                    if (item.isLeaf()) {
+                        return packer.pack(space, Stream.of(item));
                     } else {
-                        return packer.pack(space,item.getChildren().stream()).flatMap(pair -> recurse(pair.b(),pair.a()));
+                        return packer.pack(space, item.getChildren().stream()).flatMap(pair -> recurse(pair.b(), pair.a()));
                     }
                 }
 
@@ -84,33 +81,33 @@ public class TreeMap extends StackPane {
     private final Service<Void> rectangleCreator = new Service<>() {
         @Override
         protected Task<Void> createTask() {
-            return new Task<Void>() {
+            return new Task<>() {
                 @Override
-                protected Void call() throws Exception {
+                protected Void call() {
                     System.out.println("Rectangle Creator Started");
                     List<Rectangle> items = TreeItemUtils.flatMapTreeItem(context.getValue())
-                            .filter(ti -> TreeItemUtils.isRegularFile(ti)) //Files only
-                            .map( ti -> {
-                                if( pathToRect.get(ti) != null ) { return pathToRect.get(ti); }
+                            .filter(TreeItemUtils::isRegularFile) //Files only
+                            .map(ti -> {
+                                if (pathToRect.get(ti) != null) {
+                                    return pathToRect.get(ti);
+                                }
                                 Rectangle r = new Rectangle();
                                 r.setFill(typePainter.get().apply(TreeItemUtils.getType(ti)));
                                 r.setStrokeType(StrokeType.INSIDE);
                                 r.setStroke(Color.BLACK);
                                 r.setStrokeWidth(1);
-                                r.addEventFilter(MouseEvent.ANY,defaultMouseHandler);
-                                pathToRect.put(ti,r);
-                                rectToPath.put(r,ti);
+                                r.addEventFilter(MouseEvent.ANY, defaultMouseHandler);
+                                pathToRect.put(ti, r);
+                                rectToPath.put(r, ti);
                                 return r;
                             }).toList();
 
-                    Platform.runLater(() ->  {
-                        pUsage.getChildren().setAll(items);
-                    } );
+                    Platform.runLater(() -> pUsage.getChildren().setAll(items));
 
                     return null;
                 }
 
-                };
+            };
         }
     };
     private final ObjectProperty<Path> shader = new SimpleObjectProperty<>();
@@ -167,9 +164,7 @@ public class TreeMap extends StackPane {
 
         rectangleUpdater.setLookupFunction(ti -> Optional.ofNullable(pathToRect.get(ti)) );
         rectangleUpdater.setOnRunning(eh -> spinnymajig.setVisible(true));
-        rectangleCreator.setOnSucceeded(eh -> {
-            treeMapPacker.restart();
-        });
+        rectangleCreator.setOnSucceeded(eh -> treeMapPacker.restart());
 
         shader.addListener((ob,ov,nv) -> {
             if(nv == null) {
@@ -230,11 +225,11 @@ public class TreeMap extends StackPane {
        createShaderForSelection();
     }
 
-    Stream<PathElement> createRect(Rectangle r,boolean remove) {
-        return createRect(r.getX(),r.getY(),r.getWidth(),r.getHeight(),remove);
+    Stream<PathElement> createRemoveRect(Rectangle r) {
+        return createRect(r.getX(),r.getY(),r.getWidth(),r.getHeight(),true);
     }
 
-    Stream<PathElement> createRect(double x,double y, double w, double h,boolean remove) {
+    Stream<PathElement> createRect(double x, double y, double w, double h, boolean remove) {
         if(remove) {
             return Stream.of(
                     new MoveTo(x+w, y+h),
@@ -264,7 +259,7 @@ public class TreeMap extends StackPane {
         p.getElements().addAll(createRect(0,0,pUsage.getWidth(),pUsage.getHeight(),false).toList());
 
         p.getElements().addAll(
-                selection.stream().flatMap(ti -> Optional.ofNullable(pathToRect.get(ti)).stream()).flatMap( r -> createRect(r,true)).collect(Collectors.toList())
+                selection.stream().flatMap(ti -> Optional.ofNullable(pathToRect.get(ti)).stream()).flatMap(this::createRemoveRect).collect(Collectors.toList())
         );
 
         shader.set(p);

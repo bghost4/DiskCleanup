@@ -61,9 +61,7 @@ public class MainWindow extends VBox {
     @FXML
     private ProgressBar pbMemUsage;
 
-    TreeMap treeMap = new TreeMap();
-
-    private Double notSelectedOpacity = 0.35;
+    final TreeMap treeMap = new TreeMap();
 
     //TODO make this a prefrence
     private final Executor exec = Executors.newFixedThreadPool(2, r -> {
@@ -72,13 +70,13 @@ public class MainWindow extends VBox {
         return t;
     });
 
-    private final ScheduledService<Void> svc = new ScheduledService<Void>() {
+    private final ScheduledService<Void> svc = new ScheduledService<>() {
         @Override
         protected Task<Void> createTask() {
             return new Task<>() {
                 @Override
-                protected Void call() throws Exception {
-                    double percent = 1 - ((double)Runtime.getRuntime().freeMemory() / (double)Runtime.getRuntime().totalMemory());
+                protected Void call() {
+                    double percent = 1 - ((double) Runtime.getRuntime().freeMemory() / (double) Runtime.getRuntime().totalMemory());
                     String text = String.format(
                             "%s Free of %s",
                             FileUtils.byteCountToDisplaySize(Runtime.getRuntime().freeMemory()),
@@ -195,9 +193,7 @@ public class MainWindow extends VBox {
                 long total = subChildren.stream().mapToLong(i -> i.getValue().length() ).sum();
                 childItem.setValue(childItem.getValue().update(total));
                 childItem.getChildren().addAll(subChildren);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            } catch (ExecutionException e) {
+            } catch (InterruptedException | ExecutionException e) {
                 throw new RuntimeException(e);
             }
         }));
@@ -306,8 +302,6 @@ public class MainWindow extends VBox {
         tblStats.getSelectionModel().selectedItemProperty().addListener((ob,ov,nv) -> {
             ttFileView.getSelectionModel().clearSelection(); //clear selection from Tree View
             if(nv != null ) {
-                //forceRectFill(ti -> getType(ti).equals(nv.type()), Color.LIGHTGRAY);
-                //updateRects(t -> getType(t).equals(nv.type()),(i,r) -> r.setOpacity(1),(i,r) -> r.setOpacity(notSelectedOpacity));
                 treeMap.setSelection(t -> getType(t).equals(nv.type()));
             } else {
                 //updateRects( t-> true,(i,r) -> r.setOpacity(1),(i,r) -> r.setOpacity(1));
@@ -426,7 +420,7 @@ public class MainWindow extends VBox {
         tblStats.getItems().sort(Comparator.comparingLong(FileTypeSizeCount::size).reversed());
 
         tblStats.getItems().forEach(i -> typeColor.put(i.type(),randomColor(r)));
-        treeMap.setTypePainter(s -> typeColor.get(s) );
+        treeMap.setTypePainter(typeColor::get);
     }
 
     public MainWindow() {

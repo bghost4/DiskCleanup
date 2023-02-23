@@ -59,18 +59,4 @@ public class FileScannerTask extends Task<List<TreeItem<StatItem>>> {
 
     public TreeItem<StatItem> getParent() { return parent; }
 
-//    void updateParent(TreeItem<StatItem> parent) {
-//        if(parent == null) {
-//            return;
-//        }
-//        if(parent.getChildren().stream().noneMatch(ti -> ti.getValue().isProcesing())) {
-//            parent.setValue(parent.getValue().update(
-//                    parent.getChildren().stream().mapToLong(
-//                            ti -> ti.getValue().length()
-//                    ).sum()
-//            ));
-//            parent.getChildren().sort(Comparator.comparingLong((TreeItem<StatItem> ti) ->ti.getValue().length()).reversed());
-//        }
-//    }
-
 }

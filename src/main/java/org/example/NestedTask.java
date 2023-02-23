@@ -18,7 +18,7 @@ public class NestedTask<T extends Task<?>> extends Task<Void> {
     @Override
     protected Void call() throws Exception {
 
-        dependants.forEach(t -> executor.execute(t));
+        dependants.forEach(executor::execute);
 
         while(!dependants.stream().allMatch(t -> t.isDone())) {
             Thread.sleep(100);

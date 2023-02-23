@@ -5,7 +5,6 @@ import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.scene.control.TreeItem;
 import javafx.scene.shape.Rectangle;
-import org.w3c.dom.css.Rect;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,24 +24,22 @@ public class RectangleUpdateService extends Service<Void>{
 
         //Variables to attempt to optimize snoozeTime and segmentSize
         private long lastRuntime = 0;
-        private long updateTime = 0;
-        private long prevLastRunTime = 0;
 
-        private int minSegments = 10;
-        private int minSnooze = 5;
+    private final int minSegments = 10;
+        private final int minSnooze = 5;
 
         public void reportLastUpdateTime(Long millis) {
-            updateTime = millis;
+            long updateTime = millis;
             if(updateTime > snoozeTime) {
                 //we are probably hanging up the application thread
-                System.out.println("Stuttering: update("+updateTime+") snooze("+snoozeTime+")");
+                System.out.println("Stuttering: update("+ updateTime +") snooze("+snoozeTime+")");
                 segmentSize = Math.max(segmentSize - (segmentSize/4),minSegments); //decrease segmentsize by 25%
                 snoozeTime = Math.max(minSnooze,snoozeTime + (snoozeTime/4)); //increase snooze time by 25%
             }
         }
 
         private void updateLastRuntime(long currentTimeMillis) {
-            prevLastRunTime = lastRuntime;
+            long prevLastRunTime = lastRuntime;
             lastRuntime = currentTimeMillis;
         }
 

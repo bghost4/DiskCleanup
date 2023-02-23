@@ -9,11 +9,11 @@ import java.util.stream.Stream;
 
 public class TreeItemUtils {
     public static <A> Stream<A> flatMapTreeItemUnwrap(TreeItem<A> item) {
-        return Stream.concat(Stream.of(item.getValue()),item.getChildren().stream().flatMap(i -> flatMapTreeItemUnwrap(i)));
+        return Stream.concat(Stream.of(item.getValue()),item.getChildren().stream().flatMap(TreeItemUtils::flatMapTreeItemUnwrap));
     }
 
     public static <A> Stream<TreeItem<A>> flatMapTreeItem(TreeItem<A> item) {
-        return Stream.concat(Stream.of(item),item.getChildren().stream().flatMap(i -> flatMapTreeItem(i)));
+        return Stream.concat(Stream.of(item),item.getChildren().stream().flatMap(TreeItemUtils::flatMapTreeItem));
     }
 
 
