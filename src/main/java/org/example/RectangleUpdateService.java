@@ -90,7 +90,7 @@ public class RectangleUpdateService extends Service<Void>{
                             final List<Pair<Rectangle,Bound>> cp = new ArrayList<>(items); //shallow copy
                             Platform.runLater(() -> {
                                 updateLastRuntime(System.currentTimeMillis());
-                                cp.stream().forEach(p -> {
+                                cp.forEach(p -> {
                                     p.a().setX(p.b().x());
                                     p.a().setY(p.b().y());
                                     p.a().setWidth(p.b().width());

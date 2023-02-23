@@ -14,7 +14,7 @@ public class RectPacker<T> {
     }
 
     public Stream<Pair<T,Bound>> pack(Bound space, Stream<T> toPackStream) {
-        List<T> toPack = toPackStream.collect(Collectors.toList());
+        List<T> toPack = toPackStream.toList();
         if(toPack.size() == 1) {
             return Stream.of(new Pair<>(toPack.get(0),space));
         } else {

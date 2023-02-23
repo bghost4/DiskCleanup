@@ -167,11 +167,7 @@ public class TreeMap extends StackPane {
         rectangleCreator.setOnSucceeded(eh -> treeMapPacker.restart());
 
         shader.addListener((ob,ov,nv) -> {
-            if(nv == null) {
-                getChildren().set(1,new Group());
-            } else {
-                getChildren().set(1,nv);
-            }
+            getChildren().set(1, Objects.requireNonNullElseGet(nv, Group::new));
         });
 
         rectangleUpdater.setOnSucceeded(eh -> {
@@ -259,7 +255,7 @@ public class TreeMap extends StackPane {
         p.getElements().addAll(createRect(0,0,pUsage.getWidth(),pUsage.getHeight(),false).toList());
 
         p.getElements().addAll(
-                selection.stream().flatMap(ti -> Optional.ofNullable(pathToRect.get(ti)).stream()).flatMap(this::createRemoveRect).collect(Collectors.toList())
+                selection.stream().flatMap(ti -> Optional.ofNullable(pathToRect.get(ti)).stream()).flatMap(this::createRemoveRect).toList()
         );
 
         shader.set(p);
