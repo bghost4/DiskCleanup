@@ -285,7 +285,6 @@ public class MainWindow extends VBox {
             }
         });
 
-
         ttFileView.getSelectionModel().selectedItemProperty().addListener((ob,ov,nv) -> {
             if(nv != null) {
                 //updateRects((ti -> isChildOf(nv,ti)), (t, r) -> r.setOpacity(1), (t, r) -> r.setOpacity(notSelectedOpacity));
@@ -308,6 +307,7 @@ public class MainWindow extends VBox {
                 treeMap.setSelection(t -> getType(t).equals(nv.type()));
             } else {
                 //updateRects( t-> true,(i,r) -> r.setOpacity(1),(i,r) -> r.setOpacity(1));
+                treeMap.clearSelection();
             }
         });
 
@@ -333,12 +333,6 @@ public class MainWindow extends VBox {
                 }
             }
         });
-
-        //Platform.runLater(() -> pUsageView.getChildren().add(r));
-//        r.setOnMouseClicked(eh -> {
-//
-//        });
-
     }
 
     private void createTreeContextMenu() {
@@ -360,21 +354,6 @@ public class MainWindow extends VBox {
         ctx.getItems().addAll(miSystemOpen,miDeleteNode,miRebuildTree,miZoomInto,miZoomOut,miZoomRoot,miFindDuplicates);
         ttFileView.setContextMenu(ctx);
     }
-
-//    private void updateRects(Predicate<TreeItem<StatItem>> matcher, BiConsumer<TreeItem<StatItem>,Rectangle> match, BiConsumer<TreeItem<StatItem>,Rectangle> nomatch) {
-//        TreeItemUtils.flatMapTreeItem(ttFileView.getRoot())
-//                .filter(ti -> !Files.isDirectory(ti.getValue().p())) //Leave directories out of this they are special
-//                .forEach(ti -> {
-//                    Rectangle r = pathToRect.get(ti);
-//                    if(r != null ) {
-//                        if (matcher.test(ti)) {
-//                            match.accept(ti, r);
-//                        } else {
-//                            nomatch.accept(ti,r);
-//                        }
-//                    }
-//                });
-//    }
 
     private void findDuplicates(TreeItem<StatItem> selectedItem) {
     }

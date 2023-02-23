@@ -2,12 +2,14 @@ package org.example;
 
 import com.sun.source.tree.Tree;
 import javafx.application.Platform;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.event.EventHandler;
+import javafx.scene.Group;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.TreeItem;
@@ -23,6 +25,7 @@ import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class TreeMap extends StackPane {
@@ -35,10 +38,11 @@ public class TreeMap extends StackPane {
 
     private final SimpleObjectProperty<Function<String, Paint>> typePainter = new SimpleObjectProperty<>((s) -> Color.LIGHTGRAY);
 
-    private final Pane pUsage = new Pane();
-
     private final SimpleObjectProperty<TreeItem<StatItem>> context = new SimpleObjectProperty<>();
     private final SimpleObjectProperty<BiConsumer<MouseEvent,TreeItem<StatItem>>> mouseHandler = new SimpleObjectProperty<>();
+
+    private final Pane pUsage = new Pane();
+    private final ProgressIndicator spinnymajig = new ProgressIndicator();
 
     private final RectangleUpdateService rectangleUpdater = new RectangleUpdateService();
 
@@ -53,10 +57,6 @@ public class TreeMap extends StackPane {
             }
         }
     };
-
-    private final ProgressIndicator spinnymajig = new ProgressIndicator();
-
-
 
     private final Service<List<Pair<TreeItem<StatItem>,Bound>>> treeMapPacker = new Service<List<Pair<TreeItem<StatItem>,Bound>>>() {
         @Override
@@ -87,23 +87,25 @@ public class TreeMap extends StackPane {
             return new Task<Void>() {
                 @Override
                 protected Void call() throws Exception {
-                    System.out.println("Retangle Creator Started");
-                    List<TreeItem<StatItem>> items = TreeItemUtils.flatMapTreeItem(context.getValue()).filter(TreeItem::isLeaf).toList();
+                    System.out.println("Rectangle Creator Started");
+                    List<Rectangle> items = TreeItemUtils.flatMapTreeItem(context.getValue())
+                            .filter(ti -> TreeItemUtils.isRegularFile(ti)) //Files only
+                            .map( ti -> {
+                                if( pathToRect.get(ti) != null ) { return pathToRect.get(ti); }
+                                Rectangle r = new Rectangle();
+                                r.setFill(typePainter.get().apply(TreeItemUtils.getType(ti)));
+                                r.setStrokeType(StrokeType.INSIDE);
+                                r.setStroke(Color.BLACK);
+                                r.setStrokeWidth(1);
+                                r.addEventFilter(MouseEvent.ANY,defaultMouseHandler);
+                                pathToRect.put(ti,r);
+                                rectToPath.put(r,ti);
+                                return r;
+                            }).toList();
 
-                    items.forEach( ti -> {
-                        Rectangle r = new Rectangle();
-                        r.setFill(typePainter.get().apply(TreeItemUtils.getType(ti)));
-                        r.setStrokeType(StrokeType.INSIDE);
-                        r.setStrokeWidth(1);
-                        r.addEventFilter(MouseEvent.ANY,defaultMouseHandler);
-                        pathToRect.put(ti,r);
-                        rectToPath.put(r,ti);
-                        }
-                    );
-
-                    System.out.println("Created "+items.size()+" Rectangles");
-
-                    Platform.runLater(() ->  pUsage.getChildren().setAll(rectToPath.keySet()) );
+                    Platform.runLater(() ->  {
+                        pUsage.getChildren().setAll(items);
+                    } );
 
                     return null;
                 }
@@ -111,79 +113,83 @@ public class TreeMap extends StackPane {
                 };
         }
     };
-    private Path shader;
-
+    private final ObjectProperty<Path> shader = new SimpleObjectProperty<>();
 
     //Complete Regeneration of treeMap
     private void generateTreeMap(TreeItem<StatItem> root) {
         pUsage.getChildren().clear();
         rectToPath.clear();
         pathToRect.clear();
-        if(shader != null) { getChildren().remove(shader); shader = null; }
 
         if(root != null) {
-            if(rectangleCreator.isRunning()) {
-                rectangleCreator.cancel();
-            } else {
-                getChildren().add(spinnymajig);
-            }
+            if(rectangleUpdater.isRunning()) { rectangleUpdater.cancel(); }
+            if(treeMapPacker.isRunning()) { treeMapPacker.cancel(); }
+            if(rectangleCreator.isRunning()) { rectangleCreator.cancel(); }
             rectangleCreator.restart();
-        }
+            }
     }
 
     public TreeMap() {
         super();
 
+        //Keep progress indicator from getting mouse events
+        spinnymajig.setMouseTransparent(true);
+
         getChildren().add(pUsage);
+        getChildren().add(new Group());
+        getChildren().add(spinnymajig);
 
         packer = new RectPacker<>(ti -> ti.getValue().length());
 
-        System.out.println("Initial Width: "+getWidth());
-        System.out.println("Initial Height: "+getHeight());
+        //These events really need to kick off when the user is done dragging the window to size
+            widthProperty().addListener( (ob,ov,nv) -> {
+                    pUsage.setPrefWidth(nv.doubleValue()-5);
+                treeMapPacker.restart();
+            });
 
-        widthProperty().addListener( (ob,ov,nv) -> {
-            System.out.println("Width Changed: "+nv);
-                pUsage.setPrefWidth(nv.doubleValue()-5);
-            treeMapPacker.restart();
-        });
-
-        heightProperty().addListener( (ob,ov,nv) -> {
-            System.out.println("Height Changed: "+nv);
-                pUsage.setPrefHeight(nv.doubleValue()-5);
-            treeMapPacker.restart();
-        });
+            heightProperty().addListener( (ob,ov,nv) -> {
+                    pUsage.setPrefHeight(nv.doubleValue()-5);
+                treeMapPacker.restart();
+            });
 
         context.addListener((ob,ov,nv) -> {
-            System.out.println("Context Changed: "+nv.getValue().p());
             if(ov == null) {
                 generateTreeMap(nv);
             } else {
                 if(TreeItemUtils.flatMapTreeItem(ov).anyMatch(ti -> ti == nv)) {
                     treeMapPacker.restart();
+                    shader.get().setVisible(false);
                 } else {
                     generateTreeMap(nv);
                 }
             }
         });
 
-        rectangleUpdater.setLookupFunction(ti ->
-                {
-                    Optional<Rectangle> or = Optional.ofNullable(pathToRect.get(ti));
-                    if(or.isEmpty()) {
-                        System.err.println("Rectangle Lookup for: "+ti.getValue().p());
-                    }
-                    return or;
-                }
-        );
-
+        rectangleUpdater.setLookupFunction(ti -> Optional.ofNullable(pathToRect.get(ti)) );
+        rectangleUpdater.setOnRunning(eh -> spinnymajig.setVisible(true));
         rectangleCreator.setOnSucceeded(eh -> {
             treeMapPacker.restart();
         });
 
+        shader.addListener((ob,ov,nv) -> {
+            if(nv == null) {
+                getChildren().set(1,new Group());
+            } else {
+                getChildren().set(1,nv);
+            }
+        });
+
+        rectangleUpdater.setOnSucceeded(eh -> {
+                spinnymajig.setVisible(false);
+                if(selection.size() > 0) {
+                    createShaderForSelection();
+                }
+            }
+        );
+
         treeMapPacker.setOnSucceeded(eh -> {
             System.out.println("Tree Map is repacked");
             rectangleUpdater.setPackingOrder(treeMapPacker.getValue());
-            //getChildren().remove(spinnymajig);
         });
 
         context.addListener((ob,ov,nv) -> {
@@ -205,12 +211,12 @@ public class TreeMap extends StackPane {
     }
 
     public void refresh() {
-        generateTreeMap(context.get());
+        System.out.println("Refresh Called");
+        treeMapPacker.restart();
     }
 
     public void setSelection(TreeItem<StatItem> nv) {
-        selection.clear();
-        selection.addAll(
+        selection.setAll(
             TreeItemUtils.flatMapTreeItem(nv).toList()
         );
         createShaderForSelection();
@@ -224,20 +230,20 @@ public class TreeMap extends StackPane {
        createShaderForSelection();
     }
 
-    List<PathElement> createRect(Rectangle r,boolean remove) {
+    Stream<PathElement> createRect(Rectangle r,boolean remove) {
         return createRect(r.getX(),r.getY(),r.getWidth(),r.getHeight(),remove);
     }
 
-    List<PathElement> createRect(double x,double y, double w, double h,boolean remove) {
+    Stream<PathElement> createRect(double x,double y, double w, double h,boolean remove) {
         if(remove) {
-            return List.of(
+            return Stream.of(
                     new MoveTo(x+w, y+h),
                     new VLineTo(y),
                     new HLineTo(x),
                     new VLineTo(y+h),
                     new HLineTo(x+w) );
         } else {
-            return List.of(
+            return Stream.of(
                     new MoveTo(x, y),
                     new HLineTo(w),
                     new VLineTo(h),
@@ -246,31 +252,27 @@ public class TreeMap extends StackPane {
         }
     }
 
-    private Path createShaderForSelection() {
+    private void createShaderForSelection() {
         Path p = new Path();
-
+        //Shader Setup
         p.setFill(Color.WHITE);
         p.setStroke(null);
         p.setOpacity(0.75);
         p.setFillRule(FillRule.EVEN_ODD);
-
-        p.getElements().addAll(createRect(0,0,pUsage.getWidth(),pUsage.getHeight(),false));
-        selection.stream().flatMap(ti -> Optional.ofNullable(pathToRect.get(ti)).stream()).forEach(r -> {
-            p.getElements().addAll(createRect(r,true));
-        });
-
-        //wish there was a way to make path transparent to mouse events
         p.setMouseTransparent(true);
 
-        if(shader != null) {
-            getChildren().remove(shader);
-        }
-        shader = p;
-        getChildren().add(shader);
-        return p;
+        p.getElements().addAll(createRect(0,0,pUsage.getWidth(),pUsage.getHeight(),false).toList());
+
+        p.getElements().addAll(
+                selection.stream().flatMap(ti -> Optional.ofNullable(pathToRect.get(ti)).stream()).flatMap( r -> createRect(r,true)).collect(Collectors.toList())
+        );
+
+        shader.set(p);
     }
 
     public void clearSelection() {
+        selection.clear();
+        shader.set(null);
     }
 
     public Function<String, Paint> getTypePainter() {

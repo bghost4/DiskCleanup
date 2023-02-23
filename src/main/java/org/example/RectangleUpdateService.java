@@ -55,20 +55,19 @@ public class RectangleUpdateService extends Service<Void>{
                         while( i < packingOrder.size() ) {
                             List<Pair<Rectangle,Bound>> items = new ArrayList<>(segmentSize);
                             if(Thread.interrupted()) { return null; }
-                            for(int segment = 0; segment < segment; segment++) {
+                            for(int segment = 0; segment < Math.min(segmentSize,(packingOrder.size()-i)); segment++) {
                                 if(Thread.interrupted()) { return null; }
                                 Pair<TreeItem<StatItem>,Bound> item = packingOrder.get(i);
                                 lookupFunction.apply(item.a()).ifPresent(rect -> items.add(new Pair<>(rect,item.b())));
                                 i++;
                                 if( i > packingOrder.size()) {
-                                    break;
+                                   segment = segmentSize;
                                 }
                             }
 
-                            if(items.size() == 0) { return null; }
-
+                            Thread.sleep(100); //give the poor application thread some room to breathe
+                            final List<Pair<Rectangle,Bound>> cp = new ArrayList<>(items); //shallow copy
                             Platform.runLater(() -> {
-                                List<Pair<Rectangle,Bound>> cp = new ArrayList<>(items);
                                 System.out.println("updated "+cp.size()+" Rectangles");
                                 cp.stream().forEach(p -> {
                                     p.a().setX(p.b().x());
@@ -81,6 +80,9 @@ public class RectangleUpdateService extends Service<Void>{
                     } else {
                         System.err.println("Packing List was null or empty");
                     }
+
+                    System.out.println("Finished updating Rectangles");
+
                     return null;
                 }
             };
