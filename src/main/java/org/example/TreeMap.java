@@ -221,6 +221,12 @@ public class TreeMap extends StackPane {
        createShaderForSelection();
     }
 
+    public void setSelection(List<TreeItem<StatItem>> result) {
+        selection.setAll(result);
+        createShaderForSelection();
+    }
+
+
     Stream<PathElement> createRemoveRect(Rectangle r) {
         return createRect(r.getX(),r.getY(),r.getWidth(),r.getHeight(),true);
     }
@@ -297,4 +303,6 @@ public class TreeMap extends StackPane {
     public void setMouseHandler(BiConsumer<MouseEvent,TreeItem<StatItem>> mouseHandler) {
         this.mouseHandler.set(mouseHandler);
     }
+
+
 }
