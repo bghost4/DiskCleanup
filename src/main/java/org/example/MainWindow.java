@@ -8,6 +8,7 @@ import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.*;
@@ -18,6 +19,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.DirectoryChooser;
+import javafx.stage.Stage;
 import javafx.util.Duration;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -124,7 +126,13 @@ public class MainWindow extends VBox {
 
     @FXML
     private void onFindDuplicates(ActionEvent e) {
-
+            Stage stage = new Stage();
+            FindDuplicatesUI ui = new FindDuplicatesUI();
+            ui.searchContextProperty().set(ttFileView);
+            ui.setTreeMap(treeMap);
+            Scene s = new Scene(ui);
+            stage.setScene(s);
+            stage.show();
     }
 
     @FXML
