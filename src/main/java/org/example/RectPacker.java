@@ -2,23 +2,23 @@ package org.example;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class RectPacker<T,R> {
+public class RectPacker<T> {
     final Function<T,Long> areaFunction;
-    final BiFunction<T,Bound,R> mappingFunction;
 
-    public RectPacker(Function<T, Long> areaFunction, BiFunction<T, Bound, R> mappingFunction) {
+    public RectPacker(Function<T, Long> areaFunction) {
         this.areaFunction = areaFunction;
-        this.mappingFunction = mappingFunction;
     }
 
-    public Stream<R> pack(Bound space, List<T> toPack) {
+    public Stream<Pair<T,Bound>> pack(Bound space, Stream<T> toPackStream) {
+        List<T> toPack = toPackStream.collect(Collectors.toList());
         if(toPack.size() == 1) {
-            return Stream.of(mappingFunction.apply(toPack.get(0),space));
+            return Stream.of(new Pair<>(toPack.get(0),space));
         } else {
             final List<T> bigGroup;
             final List<T> smallGroup;
@@ -42,8 +42,8 @@ public class RectPacker<T,R> {
 
             List<Bound> groups = space.split(bigGroupPercent);
             return Stream.concat(
-                    pack(groups.get(0),bigGroup),
-                    pack(groups.get(1),smallGroup));
+                    pack(groups.get(0),bigGroup.stream()),
+                    pack(groups.get(1),smallGroup.stream()));
 
         }
     }
