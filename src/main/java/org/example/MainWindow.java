@@ -34,6 +34,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class MainWindow extends VBox {
 
@@ -298,9 +299,9 @@ public class MainWindow extends VBox {
                 //updateRects((ti -> isChildOf(nv,ti)), (t, r) -> r.setOpacity(1), (t, r) -> r.setOpacity(notSelectedOpacity));
                 TreeItemUtils.recursiveExpand(nv);
                 if(nv.isLeaf()) {
-                    treeMap.setSelection(nv);
+                    treeMap.setSelection(() -> Stream.of(nv));
                 } else {
-                    treeMap.setSelection(ti -> TreeItemUtils.isChildOf(nv,ti));
+                    treeMap.setSelection(() -> TreeItemUtils.flatMapTreeItem(nv));
                 }
             } else {
                 treeMap.clearSelection();
@@ -310,9 +311,9 @@ public class MainWindow extends VBox {
         tblStats.getSelectionModel().selectedItemProperty().addListener((ob,ov,nv) -> {
             ttFileView.getSelectionModel().clearSelection(); //clear selection from Tree View
             if(nv != null ) {
-                treeMap.setSelection(t -> getType(t).equals(nv.type()));
+                final String type = nv.type();
+                treeMap.setSelection(() -> TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(ti ->  type.equals(getType(ti))));
             } else {
-                //updateRects( t-> true,(i,r) -> r.setOpacity(1),(i,r) -> r.setOpacity(1));
                 treeMap.clearSelection();
             }
         });

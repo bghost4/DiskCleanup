@@ -44,7 +44,7 @@ public class FindDuplicatesUI extends VBox {
                     cboStrategy.getValue().getPredicate().test(ti)
             ).toList();
             if(treeMap != null) {
-                treeMap.setSelection(result);
+                treeMap.setSelection(() -> result.stream() );
             }
             lstFoundFiles.getItems().setAll(result);
         }
@@ -82,7 +82,7 @@ public class FindDuplicatesUI extends VBox {
     private void onShowSelectionInTreeMap(ActionEvent e) {
         if(treeMap != null) {
             System.out.println("Showing Selection in TreeMap");
-            treeMap.setSelection(lstFoundFiles.getItems());
+            treeMap.setSelection( () -> lstFoundFiles.getItems().stream() );
         }
     }
 

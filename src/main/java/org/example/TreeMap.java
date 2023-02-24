@@ -1,10 +1,11 @@
 package org.example;
 
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.BooleanExpression;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.event.EventHandler;
@@ -21,16 +22,14 @@ import javafx.scene.shape.*;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 public class TreeMap extends StackPane {
     private final HashMap<TreeItem<StatItem>,Rectangle> pathToRect = new HashMap<>();
     private final HashMap<Rectangle,TreeItem<StatItem>> rectToPath = new HashMap<>();
 
-    private final RectPacker<TreeItem<StatItem>> packer;
-
-    private final ObservableList<TreeItem<StatItem>> selection = FXCollections.observableArrayList();
+    private final ObjectProperty<Supplier<Stream<TreeItem<StatItem>>>> selection = new SimpleObjectProperty<>();
 
     private final SimpleObjectProperty<Function<String, Paint>> typePainter = new SimpleObjectProperty<>((s) -> Color.LIGHTGRAY);
 
@@ -54,9 +53,20 @@ public class TreeMap extends StackPane {
         }
     };
 
+    private final Service<Path> shadeMaker = new Service<>() {
+        @Override
+        protected Task<Path> createTask() {
+            return new ShadeGenerator(t -> pathToRect.get(t), selection.get().get(), pUsage.getWidth(), pUsage.getHeight());
+        }
+    };
+
+
     private final Service<List<Pair<TreeItem<StatItem>,Bound>>> treeMapPacker = new Service<>() {
+        final RectPacker<TreeItem<StatItem>> packer = new RectPacker<>(ti -> ti.getValue().length());
+
         @Override
         protected Task<List<Pair<TreeItem<StatItem>, Bound>>> createTask() {
+
             return new Task<List<Pair<TreeItem<StatItem>, Bound>>>() {
                 @Override
                 protected List<Pair<TreeItem<StatItem>, Bound>> call() {
@@ -135,16 +145,14 @@ public class TreeMap extends StackPane {
         getChildren().add(new Group());
         getChildren().add(spinnymajig);
 
-        packer = new RectPacker<>(ti -> ti.getValue().length());
-
         //These events really need to kick off when the user is done dragging the window to size
             widthProperty().addListener( (ob,ov,nv) -> {
-                    pUsage.setPrefWidth(nv.doubleValue()-5);
+                pUsage.setPrefWidth(nv.doubleValue()-5);
                 treeMapPacker.restart();
             });
 
             heightProperty().addListener( (ob,ov,nv) -> {
-                    pUsage.setPrefHeight(nv.doubleValue()-5);
+                pUsage.setPrefHeight(nv.doubleValue()-5);
                 treeMapPacker.restart();
             });
 
@@ -162,7 +170,6 @@ public class TreeMap extends StackPane {
         });
 
         rectangleUpdater.setLookupFunction(ti -> Optional.ofNullable(pathToRect.get(ti)) );
-        rectangleUpdater.setOnRunning(eh -> spinnymajig.setVisible(true));
         rectangleCreator.setOnSucceeded(eh -> treeMapPacker.restart());
 
         shader.addListener((ob,ov,nv) -> {
@@ -170,15 +177,13 @@ public class TreeMap extends StackPane {
         });
 
         rectangleUpdater.setOnSucceeded(eh -> {
-                spinnymajig.setVisible(false);
-                if(selection.size() > 0) {
-                    createShaderForSelection();
+                if(selection.get().get().count() > 0) {
+                    shadeMaker.restart();
                 }
             }
         );
 
         treeMapPacker.setOnSucceeded(eh -> {
-            System.out.println("Tree Map is repacked");
             rectangleUpdater.setPackingOrder(treeMapPacker.getValue());
         });
 
@@ -194,6 +199,37 @@ public class TreeMap extends StackPane {
             if(nv != null ) { refresh(); }
         });
 
+        shadeMaker.setOnSucceeded(eh -> getChildren().set(1,shadeMaker.getValue()));
+
+        selection.addListener( (ob,ov,nv) ->
+        {
+            if(nv != null) {
+               shadeMaker.restart();
+            } else {
+                pUsage.getChildren().remove(shader);
+            }
+        });
+
+        List<ReadOnlyBooleanProperty> items =
+                List.of(rectangleCreator.runningProperty(),
+                        rectangleUpdater.runningProperty(),
+                        treeMapPacker.runningProperty(),
+                        shadeMaker.runningProperty()
+                );
+
+        spinnymajig.visibleProperty().bind(
+                Bindings.createBooleanBinding(() -> items.stream().anyMatch(BooleanExpression::getValue),
+                        items.get(0),
+                        items.get(1),
+                        items.get(2),
+                        items.get(3)
+                        )
+        );
+
+    }
+
+    public void setSelection(Supplier<Stream<TreeItem<StatItem>>> s) {
+        selection.set(s);
     }
 
     public void setContext(TreeItem<StatItem> me) {
@@ -205,69 +241,8 @@ public class TreeMap extends StackPane {
         treeMapPacker.restart();
     }
 
-    public void setSelection(TreeItem<StatItem> nv) {
-        selection.setAll(
-            TreeItemUtils.flatMapTreeItem(nv).toList()
-        );
-        createShaderForSelection();
-    }
-
-    public void setSelection(Predicate<TreeItem<StatItem>> predicate) {
-       selection.clear();
-       selection.addAll(
-        pathToRect.keySet().stream().filter(predicate).toList()
-       );
-       createShaderForSelection();
-    }
-
-    public void setSelection(List<TreeItem<StatItem>> result) {
-        selection.setAll(result);
-        createShaderForSelection();
-    }
-
-
-    Stream<PathElement> createRemoveRect(Rectangle r) {
-        return createRect(r.getX(),r.getY(),r.getWidth(),r.getHeight(),true);
-    }
-
-    Stream<PathElement> createRect(double x, double y, double w, double h, boolean remove) {
-        if(remove) {
-            return Stream.of(
-                    new MoveTo(x+w, y+h),
-                    new VLineTo(y),
-                    new HLineTo(x),
-                    new VLineTo(y+h),
-                    new HLineTo(x+w) );
-        } else {
-            return Stream.of(
-                    new MoveTo(x, y),
-                    new HLineTo(w),
-                    new VLineTo(h),
-                    new HLineTo(x),
-                    new VLineTo(y));
-        }
-    }
-
-    private void createShaderForSelection() {
-        Path p = new Path();
-        //Shader Setup
-        p.setFill(Color.WHITE);
-        p.setStroke(null);
-        p.setOpacity(0.75);
-        p.setFillRule(FillRule.EVEN_ODD);
-        p.setMouseTransparent(true);
-
-        p.getElements().addAll(createRect(0,0,pUsage.getWidth(),pUsage.getHeight(),false).toList());
-
-        p.getElements().addAll(
-                selection.stream().flatMap(ti -> Optional.ofNullable(pathToRect.get(ti)).stream()).flatMap(this::createRemoveRect).toList()
-        );
-
-        shader.set(p);
-    }
-
     public void clearSelection() {
-        selection.clear();
+        selection.set(null);
         shader.set(null);
     }
 
