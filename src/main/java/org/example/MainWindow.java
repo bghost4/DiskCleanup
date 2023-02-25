@@ -346,6 +346,8 @@ public class MainWindow extends VBox {
         ContextMenu ctx = new ContextMenu();
         MenuItem miSystemOpen = new MenuItem("Open With System Viewer");
             miSystemOpen.setOnAction(eh -> openPath(ttFileView.getSelectionModel().getSelectedItem()));
+        MenuItem miOpenFolder = new MenuItem("Open Folder");
+            miOpenFolder.setOnAction(eh -> openFolder(ttFileView.getSelectionModel().getSelectedItem()));
         MenuItem miDeleteNode = new MenuItem("Delete (Not Really)");
             miDeleteNode.setOnAction(eh -> delete(ttFileView.getSelectionModel().getSelectedItem()));
         MenuItem miZoomInto = new MenuItem("Zoom Into");
@@ -358,9 +360,14 @@ public class MainWindow extends VBox {
             miFindDuplicates.setOnAction(eh -> findDuplicates(ttFileView.getSelectionModel().getSelectedItem()));
         MenuItem miRebuildTree = new MenuItem("Rebuild Tree");
             miRebuildTree.setOnAction(eh -> treeMap.refresh() );
-        ctx.getItems().addAll(miSystemOpen,miDeleteNode,miRebuildTree,miZoomInto,miZoomOut,miZoomRoot,miFindDuplicates);
+        ctx.getItems().addAll(miSystemOpen,miOpenFolder,miDeleteNode,miRebuildTree,miZoomInto,miZoomOut,miZoomRoot,miFindDuplicates);
+        if(!Desktop.getDesktop().isSupported(Desktop.Action.BROWSE_FILE_DIR)) {
+            ctx.getItems().remove(miOpenFolder);
+        }
         ttFileView.setContextMenu(ctx);
     }
+
+
 
     private void findDuplicates(TreeItem<StatItem> selectedItem) {
     }
@@ -391,6 +398,13 @@ public class MainWindow extends VBox {
         }
         generateFileTypeLegend();
         treeMap.setContext(last);
+    }
+
+    private void openFolder(TreeItem<StatItem> selectedItem) {
+        if(selectedItem == null ) { return; }
+        Path p = selectedItem.getValue().p();
+        Runnable r = () -> Desktop.getDesktop().browseFileDirectory(p.toFile());
+        exec.execute(r);
     }
 
     private void openPath(TreeItem<StatItem> item) {
