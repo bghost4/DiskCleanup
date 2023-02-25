@@ -1,9 +1,10 @@
-package org.example;
+package org.example.searchStrategy;
 
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.Node;
 import javafx.scene.control.TreeItem;
+import org.example.StatItem;
 
 import java.util.function.Predicate;
 

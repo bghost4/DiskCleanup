@@ -13,6 +13,8 @@ import java.util.ResourceBundle;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.layout.AnchorPane;
+import org.example.searchStrategy.FileNameStrategy;
+import org.example.searchStrategy.StrategyBase;
 
 public class FindDuplicatesUI extends VBox {
 
@@ -27,6 +29,8 @@ public class FindDuplicatesUI extends VBox {
 
     @FXML
     private ComboBox<StrategyBase> cboStrategy;
+
+    private final SimpleObjectProperty<StrategyBase> strategy = new SimpleObjectProperty<>();
 
     @FXML
     private ListView<TreeItem<StatItem>> lstFoundFiles;
@@ -64,6 +68,17 @@ public class FindDuplicatesUI extends VBox {
         this.searchContext.set(searchContext);
     }
 
+
+    public FindDuplicatesUI(TreeTableView<StatItem> tree,TreeMap treeMap,StrategyBase strategy) {
+        this();
+
+        System.out.println("Setting Constructor Values");
+        setSearchContext(tree);
+        setTreeMap(treeMap);
+        setStrategy(strategy);
+
+    }
+
     public FindDuplicatesUI() {
         super();
 
@@ -92,7 +107,7 @@ public class FindDuplicatesUI extends VBox {
         assert cboStrategy != null : "fx:id=\"cboStrategy\" was not injected: check your FXML file 'findDuplicatesUI.fxml'.";
         assert lstFoundFiles != null : "fx:id=\"lstFoundFiles\" was not injected: check your FXML file 'findDuplicatesUI.fxml'.";
 
-        cboStrategy.getItems().add(new FileNameStrategy());
+        System.out.println("Initialize Called");
 
         cboStrategy.getSelectionModel().selectedItemProperty().addListener( ( ob,ov,nv) -> {
             if(nv != null) {
@@ -126,8 +141,18 @@ public class FindDuplicatesUI extends VBox {
 
         lblResultsize.textProperty().bind(Bindings.format("%d Files Found",Bindings.size(lstFoundFiles.getItems())));
 
-        cboStrategy.getSelectionModel().select(cboStrategy.getItems().get(0));
+        if(strategy.get() != null) {
+            System.out.println("Strategy was set to: "+strategy.get().getName());
+            cboStrategy.getItems().add(strategy.get());
+        } else {
+            System.out.println("Strategy was null");
+            cboStrategy.getItems().add(new FileNameStrategy());
+        }
+        cboStrategy.setValue(cboStrategy.getItems().get(0));
+    }
 
+    public void setStrategy(StrategyBase b) {
+        cboStrategy.setValue(b);
     }
 
     public void setTreeMap(TreeMap treeMap) {

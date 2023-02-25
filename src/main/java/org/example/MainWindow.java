@@ -23,6 +23,8 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.example.searchStrategy.FileNameStrategy;
+import org.example.searchStrategy.FileTypeStrategy;
 
 import java.awt.*;
 import java.io.File;
@@ -340,6 +342,30 @@ public class MainWindow extends VBox {
                 }
             }
         });
+
+        createTableContextMenu();
+
+    }
+
+    private void createTableContextMenu() {
+        ContextMenu ctx = new ContextMenu();
+
+        MenuItem miShowFiles = new MenuItem("Show Files");
+            miShowFiles.setOnAction(eh -> {
+                Stage stage = new Stage();
+                FileTypeStrategy fns = new FileTypeStrategy();
+                    fns.setTypes(typeColor.keySet().stream().sorted().toList());
+                    fns.setSelectedType(tblStats.getSelectionModel().getSelectedItem().type());
+                FindDuplicatesUI ui = new FindDuplicatesUI(ttFileView,treeMap,fns);
+                Scene s = new Scene(ui);
+                stage.setScene(s);
+                stage.setTitle("Find File Type");
+                stage.show();
+            });
+
+        ctx.getItems().add(miShowFiles);
+
+        tblStats.setContextMenu(ctx);
     }
 
     private void createTreeContextMenu() {
@@ -347,7 +373,18 @@ public class MainWindow extends VBox {
         MenuItem miSystemOpen = new MenuItem("Open With System Viewer");
             miSystemOpen.setOnAction(eh -> openPath(ttFileView.getSelectionModel().getSelectedItem()));
         MenuItem miOpenFolder = new MenuItem("Open Folder");
-            miOpenFolder.setOnAction(eh -> openFolder(ttFileView.getSelectionModel().getSelectedItem()));
+            if(Desktop.getDesktop().isSupported(Desktop.Action.BROWSE_FILE_DIR)) {
+                miOpenFolder.setOnAction(eh -> openFolder(ttFileView.getSelectionModel().getSelectedItem()));
+            } else {
+                miOpenFolder.setOnAction( eh -> {
+                    TreeItem<StatItem> p = ttFileView.getSelectionModel().getSelectedItem();
+                    if(TreeItemUtils.isRegularFile(p)) {
+                        p = p.getParent();
+                    }
+                    openPath(p);
+                });
+            }
+
         MenuItem miDeleteNode = new MenuItem("Delete (Not Really)");
             miDeleteNode.setOnAction(eh -> delete(ttFileView.getSelectionModel().getSelectedItem()));
         MenuItem miZoomInto = new MenuItem("Zoom Into");
@@ -361,9 +398,7 @@ public class MainWindow extends VBox {
         MenuItem miRebuildTree = new MenuItem("Rebuild Tree");
             miRebuildTree.setOnAction(eh -> treeMap.refresh() );
         ctx.getItems().addAll(miSystemOpen,miOpenFolder,miDeleteNode,miRebuildTree,miZoomInto,miZoomOut,miZoomRoot,miFindDuplicates);
-        if(!Desktop.getDesktop().isSupported(Desktop.Action.BROWSE_FILE_DIR)) {
-            ctx.getItems().remove(miOpenFolder);
-        }
+
         ttFileView.setContextMenu(ctx);
     }
 

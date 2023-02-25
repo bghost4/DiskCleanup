@@ -1,9 +1,13 @@
-package org.example;
+package org.example.searchStrategy;
 
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.StringProperty;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import org.example.StatItem;
 
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
@@ -18,6 +22,10 @@ public class FileNameStrategy extends StrategyBase {
     private final RadioButton btnIgnoreCase = new RadioButton("Ignore Case");
     private final RadioButton btnWildcard = new RadioButton("Wildcard");
     private final RadioButton btnRegex = new RadioButton("Regex");
+
+    public enum NameMatchStrategy { CASE_SENSITIVE,IGNORE_CASE,WILDCARD,REGEX }
+
+    private final SimpleObjectProperty<NameMatchStrategy> nameMatchStrategy = new SimpleObjectProperty<>(NameMatchStrategy.IGNORE_CASE);
 
     private Pattern regexPattern;
 
@@ -55,6 +63,15 @@ public class FileNameStrategy extends StrategyBase {
             }
         });
 
+        nameMatchStrategy.addListener( il -> {
+            switch(nameMatchStrategy.get()) {
+                case REGEX -> tglGroup.selectToggle(btnRegex);
+                case IGNORE_CASE -> tglGroup.selectToggle(btnIgnoreCase);
+                case CASE_SENSITIVE -> tglGroup.selectToggle(btnCaseSensitive);
+                case WILDCARD -> tglGroup.selectToggle(btnWildcard);
+            }
+        });
+
         settingUI = vb;
     }
 
@@ -88,6 +105,28 @@ public class FileNameStrategy extends StrategyBase {
         }
 
     }
+
+    public StringProperty fileNamePatternProperty() {
+        return txtName.textProperty();
+    }
+
+    public ObjectProperty<NameMatchStrategy> nameMatchStrategyProperty() {
+        return nameMatchStrategy;
+    }
+
+    public NameMatchStrategy getNameMatchStrategy() {
+        return nameMatchStrategy.get();
+    }
+
+    public void setNameMatchStrategy(NameMatchStrategy nameMatchStrategy) {
+        this.nameMatchStrategy.set(nameMatchStrategy);
+    }
+
+    public void setFileNamePattern(String s) {
+        txtName.setText(s);
+    }
+
+    public String getFileNamePattern() { return txtName.getText(); }
 
     @Override
     public String getName() {

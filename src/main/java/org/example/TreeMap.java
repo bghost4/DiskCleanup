@@ -177,7 +177,7 @@ public class TreeMap extends StackPane {
         });
 
         rectangleUpdater.setOnSucceeded(eh -> {
-                if(selection.get().get().count() > 0) {
+                if(selection.get() != null && selection.get().get().count() > 0) {
                     shadeMaker.restart();
                 }
             }
