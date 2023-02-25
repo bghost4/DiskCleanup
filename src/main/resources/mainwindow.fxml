@@ -51,7 +51,7 @@
                         <Label text="File Type Legend" />
                         <TableView fx:id="tblStats" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
                           <columns>
-                            <TableColumn fx:id="tcType" prefWidth="75.0" text="Type" />
+                            <TableColumn fx:id="tcExt" prefWidth="75.0" text="Ext" />
                             <TableColumn fx:id="tcSize" prefWidth="75.0" text="Size" />
                               <TableColumn fx:id="tcCount" prefWidth="75.0" text="Count" />
                           </columns>

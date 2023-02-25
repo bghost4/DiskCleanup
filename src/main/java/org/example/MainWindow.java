@@ -61,7 +61,7 @@ public class MainWindow extends VBox {
     @FXML
     private TableColumn<FileTypeSizeCount,Long> tcCount,tcSize;
     @FXML
-    private TableColumn<FileTypeSizeCount,String> tcType;
+    private TableColumn<FileTypeSizeCount,String> tcExt;
 
     @FXML
     private ProgressBar pbMemUsage;
@@ -104,7 +104,7 @@ public class MainWindow extends VBox {
             if(Files.isDirectory(p)) {
                 return new FileTypeSizeCount("<Directory>",p.toFile().length(),1);
             } else {
-                String type = FilenameUtils.getExtension(p.toString());
+                String type = TreeItemUtils.getType(p);
                 if(type.isBlank() || type.isEmpty()) {
                     type = "<Typeless>";
                 }
@@ -280,8 +280,8 @@ public class MainWindow extends VBox {
             }
         });
         tcCount.setCellValueFactory(vf -> new ReadOnlyObjectWrapper<>(vf.getValue().count) );
-        tcType.setCellValueFactory(vf -> new ReadOnlyObjectWrapper<>(vf.getValue().type) );
-        tcType.setCellFactory(cdf -> new TableCell<>(){
+        tcExt.setCellValueFactory(vf -> new ReadOnlyObjectWrapper<>(vf.getValue().type) );
+        tcExt.setCellFactory(cdf -> new TableCell<>(){
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
@@ -314,7 +314,7 @@ public class MainWindow extends VBox {
             ttFileView.getSelectionModel().clearSelection(); //clear selection from Tree View
             if(nv != null ) {
                 final String type = nv.type();
-                treeMap.setSelection(() -> TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(ti ->  type.equals(getType(ti))));
+                treeMap.setSelection(() -> TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(ti ->  type.equals(TreeItemUtils.getExtension(ti))));
             } else {
                 treeMap.clearSelection();
             }
@@ -455,15 +455,6 @@ public class MainWindow extends VBox {
             };
             exec.execute(r);
     }
-
-    public static String getType(Path p) {
-        return FileTypeSizeCount.fromPath(p).type();
-    }
-
-    public static String getType(TreeItem<StatItem> item) {
-        return getType(item.getValue().p());
-    }
-
 
     void generateFileTypeLegend() {
         tblStats.getItems().clear();

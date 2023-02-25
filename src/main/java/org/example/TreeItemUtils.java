@@ -3,11 +3,17 @@ package org.example;
 import javafx.scene.control.TreeItem;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.tika.Tika;
 
+import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.stream.Stream;
 
 public class TreeItemUtils {
+
+    public static Tika typeDetector = new Tika();
+
     public static <A> Stream<A> flatMapTreeItemUnwrap(TreeItem<A> item) {
         return Stream.concat(Stream.of(item.getValue()),item.getChildren().stream().flatMap(TreeItemUtils::flatMapTreeItemUnwrap));
     }
@@ -25,17 +31,33 @@ public class TreeItemUtils {
         return context.getValue().p().relativize(other.getValue().p()).toString();
     }
 
-    public static String getType(TreeItem<StatItem> item) {
-        if(Files.isDirectory(item.getValue().p())) {
+    public static String getExtension(TreeItem<StatItem> item) {
+        return getExtension(item.getValue().p());
+    }
+
+    public static String getExtension(Path p) {
+        if(Files.isDirectory(p)) {
             return "<Directory>";
         } else {
-            String type = FilenameUtils.getExtension(item.getValue().p().toString());
+            String type = FilenameUtils.getExtension(p.getFileName().toString());
             if(type.isBlank() || type.isEmpty()) {
                 return "<Typeless>";
             } else {
                 return type;
             }
         }
+    }
+
+    public static String getType(Path p) {
+        try {
+            return typeDetector.detect(p);
+        } catch(IOException e) {
+            return "<ERROR>";
+        }
+    }
+
+    public static String getType(TreeItem<StatItem> item) {
+       return getType(item.getValue().p());
     }
 
     public static boolean isRegularFile(TreeItem<StatItem> statItemTreeItem) {
