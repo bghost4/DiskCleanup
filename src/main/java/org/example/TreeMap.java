@@ -101,7 +101,7 @@ public class TreeMap extends StackPane {
                                     return pathToRect.get(ti);
                                 }
                                 Rectangle r = new Rectangle();
-                                r.setFill(typePainter.get().apply(TreeItemUtils.getType(ti)));
+                                r.setFill(typePainter.get().apply(TreeItemUtils.getExtension(ti)));
                                 r.setStrokeType(StrokeType.INSIDE);
                                 r.setStroke(Color.BLACK);
                                 r.setStrokeWidth(1);

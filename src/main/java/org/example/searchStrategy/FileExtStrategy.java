@@ -11,7 +11,7 @@ import org.example.TreeItemUtils;
 import java.util.List;
 import java.util.function.Predicate;
 
-public class FileTypeStrategy extends StrategyBase {
+public class FileExtStrategy extends StrategyBase {
 
     ComboBox<String> cboFileTypes = new ComboBox<>();
     HBox hb = new HBox();
@@ -21,13 +21,13 @@ public class FileTypeStrategy extends StrategyBase {
         return hb;
     }
 
-    public FileTypeStrategy() {
+    public FileExtStrategy() {
         hb.getChildren().addAll(new Label("File Type"),cboFileTypes);
     }
 
     @Override
     public Predicate<TreeItem<StatItem>> getPredicate() {
-        return ti -> TreeItemUtils.getType(ti).equals(cboFileTypes.getValue());
+        return ti -> TreeItemUtils.getExtension(ti).equals(cboFileTypes.getValue());
     }
 
     @Override

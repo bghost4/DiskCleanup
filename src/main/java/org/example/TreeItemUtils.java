@@ -47,18 +47,18 @@ public class TreeItemUtils {
             }
         }
     }
-
-    public static String getType(Path p) {
-        try {
-            return typeDetector.detect(p);
-        } catch(IOException e) {
-            return "<ERROR>";
-        }
-    }
-
-    public static String getType(TreeItem<StatItem> item) {
-       return getType(item.getValue().p());
-    }
+//
+//    public static String getType(Path p) {
+//        try {
+//            return typeDetector.detect(p);
+//        } catch(IOException e) {
+//            return "<ERROR>";
+//        }
+//    }
+//
+//    public static String getType(TreeItem<StatItem> item) {
+//       return getType(item.getValue().p());
+//    }
 
     public static boolean isRegularFile(TreeItem<StatItem> statItemTreeItem) {
         return Files.isRegularFile(statItemTreeItem.getValue().p());

@@ -22,9 +22,7 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
-import org.example.searchStrategy.FileNameStrategy;
-import org.example.searchStrategy.FileTypeStrategy;
+import org.example.searchStrategy.FileExtStrategy;
 
 import java.awt.*;
 import java.io.File;
@@ -104,7 +102,7 @@ public class MainWindow extends VBox {
             if(Files.isDirectory(p)) {
                 return new FileTypeSizeCount("<Directory>",p.toFile().length(),1);
             } else {
-                String type = TreeItemUtils.getType(p);
+                String type = TreeItemUtils.getExtension(p);
                 if(type.isBlank() || type.isEmpty()) {
                     type = "<Typeless>";
                 }
@@ -353,7 +351,7 @@ public class MainWindow extends VBox {
         MenuItem miShowFiles = new MenuItem("Show Files");
             miShowFiles.setOnAction(eh -> {
                 Stage stage = new Stage();
-                FileTypeStrategy fns = new FileTypeStrategy();
+                FileExtStrategy fns = new FileExtStrategy();
                     fns.setTypes(typeColor.keySet().stream().sorted().toList());
                     fns.setSelectedType(tblStats.getSelectionModel().getSelectedItem().type());
                 FindDuplicatesUI ui = new FindDuplicatesUI(ttFileView,treeMap,fns);
