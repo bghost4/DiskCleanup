@@ -2,6 +2,7 @@ package org.example;
 
 import javafx.concurrent.Task;
 import javafx.scene.control.TreeItem;
+import org.apache.commons.io.FilenameUtils;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -34,7 +35,7 @@ public class FileScannerTask extends Task<List<TreeItem<StatItem>>> {
     private TreeItem<StatItem> buildTree(Path childPath) {
         TreeItem<StatItem> childItem = new TreeItem<>(StatItem.empty(childPath));
         if(Files.isRegularFile(childPath)) {
-            childItem.setValue(new StatItem(childPath,false,childPath.toFile().length()));
+            childItem.setValue(new StatItem(childPath,false,childPath.toFile().length(),TreeItemUtils.getType(childPath), FilenameUtils.getExtension(childPath.getFileName().toString())));
             return childItem;
         } else if(Files.isDirectory(childPath)) {
             try {

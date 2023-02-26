@@ -3,6 +3,7 @@ package org.example;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.value.ObservableValue;
 import javafx.concurrent.ScheduledService;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
@@ -22,6 +23,7 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.example.searchStrategy.FileExtStrategy;
 
 import java.awt.*;
@@ -45,7 +47,10 @@ public class MainWindow extends VBox {
     private AnchorPane pUsageView;
 
     @FXML
-    private TableView<FileTypeSizeCount> tblStats;
+    private ComboBox<String> cboLegendSelect;
+
+    @FXML
+    private TableView<FileClassSizeCount> tblStats;
 
     @FXML
     private TreeTableView<StatItem> ttFileView;
@@ -57,9 +62,11 @@ public class MainWindow extends VBox {
     private TreeTableColumn<StatItem, Long> ttcSize;
 
     @FXML
-    private TableColumn<FileTypeSizeCount,Long> tcCount,tcSize;
+    private TableColumn<FileClassSizeCount,Long> tcCount,tcSize;
     @FXML
-    private TableColumn<FileTypeSizeCount,String> tcExt;
+    private TableColumn<FileClassSizeCount,String> tcExt;
+
+    private Random random = new Random();
 
     @FXML
     private ProgressBar pbMemUsage;
@@ -73,7 +80,7 @@ public class MainWindow extends VBox {
         return t;
     });
 
-    private final ScheduledService<Void> svc = new ScheduledService<>() {
+    private final ScheduledService<Void> svcMemoryUsage = new ScheduledService<>() {
         @Override
         protected Task<Void> createTask() {
             return new Task<>() {
@@ -95,24 +102,28 @@ public class MainWindow extends VBox {
         }
     };
 
-    private final HashMap<String,Color> typeColor = new HashMap<>();
+    private final HashMap<String,Color> colorPicker = new HashMap<>();
 
-    private record FileTypeSizeCount (String type,long size,long count) {
-        public static FileTypeSizeCount fromPath(Path p) {
+    private void changed(ObservableValue<? extends String> ob, String ov, String nv) {
+        generateFileTypeLegend();
+    }
+
+    private record FileClassSizeCount(String type, long size, long count) {
+        public static FileClassSizeCount fromPath(Path p) {
             if(Files.isDirectory(p)) {
-                return new FileTypeSizeCount("<Directory>",p.toFile().length(),1);
+                return new FileClassSizeCount("<Directory>",p.toFile().length(),1);
             } else {
                 String type = TreeItemUtils.getExtension(p);
                 if(type.isBlank() || type.isEmpty()) {
                     type = "<Typeless>";
                 }
-                return new FileTypeSizeCount(type, p.toFile().length(), 1);
+                return new FileClassSizeCount(type, p.toFile().length(), 1);
             }
         }
     }
 
-    private static Color randomColor(Random r) {
-        return Color.rgb(r.nextInt(0,255),r.nextInt(0,255),r.nextInt(0,255));
+    private Color randomColor() {
+        return Color.rgb(random.nextInt(0,255),random.nextInt(0,255),random.nextInt(0,255));
     }
 
     @FXML
@@ -151,7 +162,7 @@ public class MainWindow extends VBox {
 
             //update parent size
             recalcChildrenRecursive(parent);
-
+            treeMap.refresh();
         } else {
             //TODO display message about removing a root node
         }
@@ -169,20 +180,13 @@ public class MainWindow extends VBox {
             ttFileView.setRoot(buildTree(StatItem.empty(rootPath)));
     }
 
-
-
-    private static Bound fromRect(Rectangle r) {
-        return new Bound(r.getX(),r.getY(),r.getWidth(),r.getHeight());
-    }
-
     private TreeItem<StatItem> buildTree(StatItem si) {
         TreeItem<StatItem> me = new TreeItem<>(si);
 
         try {
             me.getChildren().addAll(Files.walk(si.p(), 1)
                     .filter(p -> !p.equals(si.p()))
-                    .map(p -> Files.isDirectory(p) ? new TreeItem<>(StatItem.empty(p)) : new TreeItem<>(new StatItem(p, false, p.toFile().length()))).toList());
-
+                    .map(p -> Files.isDirectory(p) ? new TreeItem<>(StatItem.empty(p)) : new TreeItem<>(new StatItem(p, false, p.toFile().length(),TreeItemUtils.getType(p), FilenameUtils.getExtension(p.getFileName().toString())))).toList());
         } catch(IOException e) {
             //todo say something useful
             e.printStackTrace();
@@ -277,6 +281,7 @@ public class MainWindow extends VBox {
                 }
             }
         });
+
         tcCount.setCellValueFactory(vf -> new ReadOnlyObjectWrapper<>(vf.getValue().count) );
         tcExt.setCellValueFactory(vf -> new ReadOnlyObjectWrapper<>(vf.getValue().type) );
         tcExt.setCellFactory(cdf -> new TableCell<>(){
@@ -286,7 +291,7 @@ public class MainWindow extends VBox {
                 if(!empty && item != null) {
                     setText(item);
                     Rectangle r = new Rectangle(16, 16);
-                    r.setFill(typeColor.get(item));
+                    r.setFill(colorPicker.computeIfAbsent(item,n -> randomColor()));
                     setGraphic(r);
                 } else {
                     setText(null); setGraphic(null);
@@ -318,8 +323,8 @@ public class MainWindow extends VBox {
             }
         });
 
-        svc.setPeriod(Duration.seconds(5));
-        svc.start();
+        svcMemoryUsage.setPeriod(Duration.seconds(5));
+        svcMemoryUsage.start();
 
         AnchorPane.setTopAnchor(treeMap,1.0);
         AnchorPane.setBottomAnchor(treeMap,1.0);
@@ -343,6 +348,10 @@ public class MainWindow extends VBox {
 
         createTableContextMenu();
 
+        cboLegendSelect.getItems().addAll("Extension","File Type");
+        cboLegendSelect.setValue("Extension");
+        cboLegendSelect.valueProperty().addListener(il -> generateFileTypeLegend());
+
     }
 
     private void createTableContextMenu() {
@@ -352,7 +361,7 @@ public class MainWindow extends VBox {
             miShowFiles.setOnAction(eh -> {
                 Stage stage = new Stage();
                 FileExtStrategy fns = new FileExtStrategy();
-                    fns.setTypes(typeColor.keySet().stream().sorted().toList());
+                    fns.setTypes(colorPicker.keySet().stream().sorted().toList());
                     fns.setSelectedType(tblStats.getSelectionModel().getSelectedItem().type());
                 FindDuplicatesUI ui = new FindDuplicatesUI(ttFileView,treeMap,fns);
                 Scene s = new Scene(ui);
@@ -459,15 +468,30 @@ public class MainWindow extends VBox {
         tblStats.getSortOrder().clear();
         tcSize.setSortType(TableColumn.SortType.DESCENDING);
         tblStats.getSortOrder().add(tcSize);
-        final Random r = new Random();
-        tblStats.getItems().addAll(
-            TreeItemUtils.flatMapTreeItemUnwrap(ttFileView.getRoot()).filter(t -> Files.isRegularFile(t.p())).map(t -> FileTypeSizeCount.fromPath(t.p())).collect(
-                    Collectors.toMap(FileTypeSizeCount::type, Function.identity(), (FileTypeSizeCount a, FileTypeSizeCount b) -> new FileTypeSizeCount(a.type, (a.size() + b.size), (a.count + b.count)))).values()
-        );
-        tblStats.getItems().sort(Comparator.comparingLong(FileTypeSizeCount::size).reversed());
 
-        tblStats.getItems().forEach(i -> typeColor.put(i.type(),randomColor(r)));
-        treeMap.setTypePainter(typeColor::get);
+        Function<StatItem,String> mappingFunction = i -> i.ext();
+
+        if(cboLegendSelect.getValue().equals("Extension")) {
+            mappingFunction = i -> i.ext();
+            tcExt.setText("Ext");
+        } else if(cboLegendSelect.getValue().equals("File Type")) {
+            mappingFunction = i -> i.type();
+            tcExt.setText("Type");
+        }
+
+        Map<String,List<StatItem>> result = TreeItemUtils.flatMapTreeItemUnwrap(ttFileView.getRoot()).filter(item -> Files.isRegularFile(item.p())).collect(Collectors.groupingBy(mappingFunction));
+        List<FileClassSizeCount> items =  result.entrySet().stream().map(e -> new FileClassSizeCount(e.getKey(),e.getValue().stream().mapToLong(si -> si.length()).sum(),e.getValue().size())).toList();
+        tblStats.getItems().setAll(items);
+        tblStats.getItems().sort(Comparator.comparingLong(FileClassSizeCount::size).reversed());
+        treeMap.setTypePainter(this::getPaint);
+    }
+
+    public Color getPaint(TreeItem<StatItem> item) {
+        if(cboLegendSelect.getValue().equals("File Type")) {
+            return colorPicker.computeIfAbsent(item.getValue().type(),n -> randomColor());
+        } else {
+            return colorPicker.computeIfAbsent(item.getValue().ext(),n -> randomColor());
+        }
     }
 
     public MainWindow() {

@@ -1,9 +1,13 @@
 package org.example;
 
 import javafx.application.Platform;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.scene.control.TreeItem;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
 
 import java.util.ArrayList;
@@ -17,6 +21,11 @@ public class RectangleUpdateService extends Service<Void>{
         private List<Pair<TreeItem<StatItem>,Bound>> packingOrder = Collections.emptyList();
         private int segmentSize = 1000;
         private int snoozeTime = 100;
+
+        private final SimpleObjectProperty<Function<TreeItem<StatItem>, Paint>> colorPicker = new SimpleObjectProperty<>((i -> Color.WHITE));
+
+        public ObjectProperty<Function<TreeItem<StatItem>,Paint>> colorPickerProperty() { return colorPicker; }
+
         private Function<TreeItem<StatItem>, Optional<Rectangle>> lookupFunction = (a) -> {
             System.out.println("No Function Set To get Rectangle");
             return Optional.empty();
@@ -25,7 +34,7 @@ public class RectangleUpdateService extends Service<Void>{
         //Variables to attempt to optimize snoozeTime and segmentSize
         private long lastRuntime = 0;
 
-    private final int minSegments = 10;
+        private final int minSegments = 10;
         private final int minSnooze = 5;
 
         public void reportLastUpdateTime(Long millis) {
@@ -79,7 +88,10 @@ public class RectangleUpdateService extends Service<Void>{
                             for(int segment = 0; segment < Math.min(segmentSize,(packingOrder.size()-i)); segment++) {
                                 if(Thread.interrupted()) { return null; }
                                 Pair<TreeItem<StatItem>,Bound> item = packingOrder.get(i);
-                                lookupFunction.apply(item.a()).ifPresent(rect -> items.add(new Pair<>(rect,item.b())));
+                                lookupFunction.apply(item.a()).ifPresent(rect -> {
+                                    rect.setFill(colorPicker.get().apply(item.a()));
+                                    items.add(new Pair<>(rect,item.b()));
+                                });
                                 i++;
                                 if( i > packingOrder.size()) {
                                    segment = segmentSize;

@@ -13,6 +13,8 @@ import java.util.ResourceBundle;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.layout.AnchorPane;
+import org.example.searchStrategy.CompositeAndStrategy;
+import org.example.searchStrategy.FileExtStrategy;
 import org.example.searchStrategy.FileNameStrategy;
 import org.example.searchStrategy.StrategyBase;
 
@@ -48,7 +50,7 @@ public class FindDuplicatesUI extends VBox {
                     cboStrategy.getValue().getPredicate().test(ti)
             ).toList();
             if(treeMap != null) {
-                treeMap.setSelection(() -> result.stream() );
+                treeMap.setSelection(result::stream);
             }
             lstFoundFiles.getItems().setAll(result);
         }
@@ -135,9 +137,7 @@ public class FindDuplicatesUI extends VBox {
             }
         });
 
-        lstFoundFiles.getSelectionModel().selectedItemProperty().addListener((ob,ov,nv) -> {
-            searchContext.get().getSelectionModel().select(nv);
-        });
+        lstFoundFiles.getSelectionModel().selectedItemProperty().addListener((ob,ov,nv) -> searchContext.get().getSelectionModel().select(nv));
 
         lblResultsize.textProperty().bind(Bindings.format("%d Files Found",Bindings.size(lstFoundFiles.getItems())));
 
@@ -146,7 +146,10 @@ public class FindDuplicatesUI extends VBox {
             cboStrategy.getItems().add(strategy.get());
         } else {
             System.out.println("Strategy was null");
-            cboStrategy.getItems().add(new FileNameStrategy());
+            cboStrategy.getItems().addAll(
+                    new FileNameStrategy(),
+                    new FileExtStrategy(),
+                    new CompositeAndStrategy());
         }
         cboStrategy.setValue(cboStrategy.getItems().get(0));
     }

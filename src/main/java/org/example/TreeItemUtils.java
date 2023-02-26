@@ -12,7 +12,7 @@ import java.util.stream.Stream;
 
 public class TreeItemUtils {
 
-    public static Tika typeDetector = new Tika();
+    public static final Tika typeDetector = new Tika();
 
     public static <A> Stream<A> flatMapTreeItemUnwrap(TreeItem<A> item) {
         return Stream.concat(Stream.of(item.getValue()),item.getChildren().stream().flatMap(TreeItemUtils::flatMapTreeItemUnwrap));
@@ -47,18 +47,19 @@ public class TreeItemUtils {
             }
         }
     }
-//
-//    public static String getType(Path p) {
-//        try {
-//            return typeDetector.detect(p);
-//        } catch(IOException e) {
-//            return "<ERROR>";
-//        }
-//    }
-//
-//    public static String getType(TreeItem<StatItem> item) {
-//       return getType(item.getValue().p());
-//    }
+
+    //This might be slow?
+    public static String getType(Path p) {
+        try {
+            return typeDetector.detect(p);
+        } catch(IOException e) {
+            return "<ERROR>";
+        }
+    }
+
+    public static String getType(TreeItem<StatItem> item) {
+       return item.getValue().type();
+    }
 
     public static boolean isRegularFile(TreeItem<StatItem> statItemTreeItem) {
         return Files.isRegularFile(statItemTreeItem.getValue().p());

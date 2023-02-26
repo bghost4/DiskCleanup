@@ -31,7 +31,7 @@ public class TreeMap extends StackPane {
 
     private final ObjectProperty<Supplier<Stream<TreeItem<StatItem>>>> selection = new SimpleObjectProperty<>();
 
-    private final SimpleObjectProperty<Function<String, Paint>> typePainter = new SimpleObjectProperty<>((s) -> Color.LIGHTGRAY);
+    private final SimpleObjectProperty<Function<TreeItem<StatItem>, Paint>> typePainter = new SimpleObjectProperty<>((s) -> Color.LIGHTGRAY);
 
     private final SimpleObjectProperty<TreeItem<StatItem>> context = new SimpleObjectProperty<>();
     private final SimpleObjectProperty<BiConsumer<MouseEvent,TreeItem<StatItem>>> mouseHandler = new SimpleObjectProperty<>();
@@ -56,7 +56,7 @@ public class TreeMap extends StackPane {
     private final Service<Path> shadeMaker = new Service<>() {
         @Override
         protected Task<Path> createTask() {
-            return new ShadeGenerator(t -> pathToRect.get(t), selection.get().get(), pUsage.getWidth(), pUsage.getHeight());
+            return new ShadeGenerator(pathToRect::get, selection.get().get(), pUsage.getWidth(), pUsage.getHeight());
         }
     };
 
@@ -101,7 +101,7 @@ public class TreeMap extends StackPane {
                                     return pathToRect.get(ti);
                                 }
                                 Rectangle r = new Rectangle();
-                                r.setFill(typePainter.get().apply(TreeItemUtils.getExtension(ti)));
+                                r.setFill(typePainter.get().apply(ti));
                                 r.setStrokeType(StrokeType.INSIDE);
                                 r.setStroke(Color.BLACK);
                                 r.setStrokeWidth(1);
@@ -172,20 +172,18 @@ public class TreeMap extends StackPane {
         rectangleUpdater.setLookupFunction(ti -> Optional.ofNullable(pathToRect.get(ti)) );
         rectangleCreator.setOnSucceeded(eh -> treeMapPacker.restart());
 
-        shader.addListener((ob,ov,nv) -> {
-            getChildren().set(1, Objects.requireNonNullElseGet(nv, Group::new));
-        });
+        shader.addListener((ob,ov,nv) -> getChildren().set(1, Objects.requireNonNullElseGet(nv, Group::new)));
+
+        rectangleUpdater.colorPickerProperty().bind(typePainter);
 
         rectangleUpdater.setOnSucceeded(eh -> {
-                if(selection.get() != null && selection.get().get().count() > 0) {
+                if(selection.get() != null && selection.get().get().findAny().isPresent()) {
                     shadeMaker.restart();
                 }
             }
         );
 
-        treeMapPacker.setOnSucceeded(eh -> {
-            rectangleUpdater.setPackingOrder(treeMapPacker.getValue());
-        });
+        treeMapPacker.setOnSucceeded(eh -> rectangleUpdater.setPackingOrder(treeMapPacker.getValue()));
 
         context.addListener((ob,ov,nv) -> {
             if(nv != null ) { refresh(); }
@@ -206,7 +204,7 @@ public class TreeMap extends StackPane {
             if(nv != null) {
                shadeMaker.restart();
             } else {
-                pUsage.getChildren().remove(shader);
+                pUsage.getChildren().remove(shader.get());
             }
         });
 
@@ -246,16 +244,17 @@ public class TreeMap extends StackPane {
         shader.set(null);
     }
 
-    public Function<String, Paint> getTypePainter() {
+    public Function<TreeItem<StatItem>, Paint> getTypePainter() {
         return typePainter.get();
     }
 
-    public SimpleObjectProperty<Function<String, Paint>> typePainterProperty() {
+    public SimpleObjectProperty<Function<TreeItem<StatItem>, Paint>> typePainterProperty() {
         return typePainter;
     }
 
-    public void setTypePainter(Function<String, Paint> typePainter) {
+    public void setTypePainter(Function<TreeItem<StatItem>, Paint> typePainter) {
         this.typePainter.set(typePainter);
+        rectangleUpdater.restart();
     }
 
     public TreeItem<StatItem> getContext() {

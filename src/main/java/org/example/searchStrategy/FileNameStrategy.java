@@ -51,8 +51,8 @@ public class FileNameStrategy extends StrategyBase {
         txtName.textProperty().addListener(il -> {
             if(tglGroup.getSelectedToggle().equals(btnRegex)) {
                 try {
-                    Pattern p = Pattern.compile(txtName.getText());
-                    regexPattern = p;
+                    regexPattern = Pattern.compile(txtName.getText());
+                    configValid.set(true);
                 } catch(PatternSyntaxException e) {
                     configValid.set(false);
                     txtName.setStyle("-fx-background: lightcoral;");
