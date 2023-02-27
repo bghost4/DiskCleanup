@@ -17,11 +17,10 @@ public class FileSizeStrategy extends StrategyBase {
     private final LongSpinnerValueFactory svf = new LongSpinnerValueFactory();
     private final Spinner<Long> spnFileSize = new Spinner<>(svf);
 
-    enum Operator { EQUAL,LESS_THAN,GREATER_THAN,LESS_THAN_EQUAL,GREATER_THAN_EQUAL }
     public ObjectProperty<Long> fileSizeProperty() { return svf.valueProperty(); }
 
-    ComboBox<Operator> cboOperator = new ComboBox<>();
-    public ObjectProperty<Operator> operatorProperty() { return cboOperator.valueProperty(); }
+    ComboBox<Comparison> cboOperator = new ComboBox<>();
+    public ObjectProperty<Comparison> operatorProperty() { return cboOperator.valueProperty(); }
 
     HBox settings = new HBox();
 
@@ -33,14 +32,14 @@ public class FileSizeStrategy extends StrategyBase {
     public FileSizeStrategy() {
         super();
 
-        cboOperator.getItems().setAll((Operator.values()));
+        cboOperator.getItems().setAll((Comparison.values()));
         settings.getChildren().addAll(new Label("File Size: "),cboOperator,spnFileSize);
         spnFileSize.setEditable(true);
     }
 
     @Override
     public Predicate<TreeItem<StatItem>> getPredicate() {
-        Operator o = cboOperator.getValue();
+        Comparison o = cboOperator.getValue();
         switch(o) {
             case EQUAL:
                 return ti -> ti.getValue().length() == svf.getValue();

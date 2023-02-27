@@ -26,6 +26,7 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.controlsfx.control.BreadCrumbBar;
 import org.example.searchStrategy.*;
 
 import java.awt.*;
@@ -33,6 +34,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileOwnerAttributeView;
+import java.nio.file.attribute.UserPrincipal;
 import java.util.List;
 import java.util.*;
 import java.util.concurrent.*;
@@ -68,13 +72,15 @@ public class MainWindow extends VBox implements DataSupplier {
     @FXML
     private TableColumn<FileClassSizeCount,String> tcExt;
 
-
+    @FXML
+    private BreadCrumbBar<StatItem> breadCrumbBar;
 
     private final Random random = new Random();
 
     private final ObservableList<String> fileTypes = FXCollections.observableArrayList();
     private final ObservableList<String> fileExts = FXCollections.observableArrayList();
     private final ObservableList<StrategyBase> strategies = FXCollections.observableArrayList();
+    private final ObservableList<UserPrincipal> fileOwners = FXCollections.observableArrayList();
 
 
     @FXML
@@ -133,6 +139,11 @@ public class MainWindow extends VBox implements DataSupplier {
     }
 
     @Override
+    public ObservableList<UserPrincipal> fileOwners() {
+        return fileOwners;
+    }
+
+    @Override
     public TreeTableView<StatItem> getTreeView() {
         return ttFileView;
     }
@@ -171,9 +182,9 @@ public class MainWindow extends VBox implements DataSupplier {
     }
 
     @FXML
-    private void onFindDuplicates(ActionEvent e) {
+    private void onFindFiles(ActionEvent e) {
             Stage stage = new Stage();
-            FindDuplicatesUI ui = new FindDuplicatesUI(this);
+            FileFinder ui = new FileFinder(this);
             ui.searchContextProperty().set(ttFileView);
             ui.setTreeMap(treeMap);
             Scene s = new Scene(ui);
@@ -220,7 +231,21 @@ public class MainWindow extends VBox implements DataSupplier {
         try {
             me.getChildren().addAll(Files.walk(si.p(), 1)
                     .filter(p -> !p.equals(si.p()))
-                    .map(p -> Files.isDirectory(p) ? new TreeItem<>(StatItem.empty(p)) : new TreeItem<>(new StatItem(p, false, p.toFile().length(),TreeItemUtils.getType(p), FilenameUtils.getExtension(p.getFileName().toString())))).toList());
+                    .map(p -> {
+                        if(Files.isDirectory(p)) {
+                            return new TreeItem<>(StatItem.empty(p));
+                        } else {
+                            try {
+                                BasicFileAttributes bfa = Files.readAttributes(p, BasicFileAttributes.class);
+                                FileOwnerAttributeView foa = Files.getFileAttributeView(p,FileOwnerAttributeView.class);
+                                return new TreeItem<>(
+                                        new StatItem(p, false, p.toFile().length(),TreeItemUtils.getType(p), FilenameUtils.getExtension(p.getFileName().toString()), bfa.creationTime().toInstant(), bfa.lastModifiedTime().toInstant(),foa.getOwner())
+                                );
+                            } catch(IOException e) {
+                                return new TreeItem<>(StatItem.empty(p));
+                            }
+                        }
+                    }).toList());
         } catch(IOException e) {
             //todo say something useful
             e.printStackTrace();
@@ -259,6 +284,10 @@ public class MainWindow extends VBox implements DataSupplier {
 
             fileTypes.setAll(
                     TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(ti -> Files.isRegularFile(ti.getValue().p())).map(item -> item.getValue().type()).distinct().toList()
+            );
+
+            fileOwners.setAll(
+                    TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(ti -> Files.isRegularFile(ti.getValue().p())).map(item -> item.getValue().owner()).distinct().toList()
             );
 
 
@@ -310,6 +339,12 @@ public class MainWindow extends VBox implements DataSupplier {
             }
         });
 
+        breadCrumbBar.selectedCrumbProperty().addListener((ob,ov,nv) -> {
+            if(ttFileView.getSelectionModel().getSelectedItem() != nv) {
+                ttFileView.getSelectionModel().select(nv);
+            }
+        });
+
         tcSize.setCellValueFactory(vf -> new ReadOnlyObjectWrapper<>(vf.getValue().size) );
         tcSize.setCellFactory(cdf -> new TableCell<>(){
             @Override
@@ -327,6 +362,7 @@ public class MainWindow extends VBox implements DataSupplier {
           new FileNameStrategy(),
           new FileExtStrategy(fileExts),
           new FileTypeStrategy(fileTypes),
+          new FileOwnerStrategy(this),
           new FileSizeStrategy(),
           new ExactNameAndSize(this),
           new CompositeAndStrategy(this),
@@ -354,12 +390,14 @@ public class MainWindow extends VBox implements DataSupplier {
             if(nv != null) {
                 //updateRects((ti -> isChildOf(nv,ti)), (t, r) -> r.setOpacity(1), (t, r) -> r.setOpacity(notSelectedOpacity));
                 TreeItemUtils.recursiveExpand(nv);
+                breadCrumbBar.setSelectedCrumb(nv);
                 if(nv.isLeaf()) {
                     treeMap.setSelection(() -> Stream.of(nv));
                 } else {
                     treeMap.setSelection(() -> TreeItemUtils.flatMapTreeItem(nv));
                 }
             } else {
+                breadCrumbBar.setSelectedCrumb(ttFileView.getRoot());
                 treeMap.clearSelection();
             }
         });
@@ -429,7 +467,8 @@ public class MainWindow extends VBox implements DataSupplier {
                     strategy = fns;
                 }
 
-                FindDuplicatesUI ui = new FindDuplicatesUI(this);
+                FileFinder ui = new FileFinder(this);
+                ui.setStrategy(strategy);
                 Scene s = new Scene(ui);
                 stage.setScene(s);
                 stage.setTitle("Find File Type");
@@ -479,7 +518,7 @@ public class MainWindow extends VBox implements DataSupplier {
 
     private void findDuplicates(TreeItem<StatItem> selectedItem) {
         Stage stage = new Stage();
-        FindDuplicatesUI dupui = new FindDuplicatesUI(this);
+        FileFinder dupui = new FileFinder(this);
         ExactNameAndSize strategy = new ExactNameAndSize(this);
             strategy.fileNameProperty().set(selectedItem.getValue().p().getFileName().toString());
             strategy.fileSizeProperty().set(selectedItem.getValue().length());

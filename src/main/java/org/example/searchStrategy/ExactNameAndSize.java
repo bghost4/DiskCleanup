@@ -2,14 +2,6 @@ package org.example.searchStrategy;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.StringProperty;
-import javafx.scene.Node;
-import javafx.scene.control.*;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
-import org.example.LongSpinnerValueFactory;
-import org.example.StatItem;
-
-import java.util.function.Predicate;
 
 public class ExactNameAndSize extends CompositeAndStrategy {
 
@@ -22,7 +14,7 @@ public class ExactNameAndSize extends CompositeAndStrategy {
     public ExactNameAndSize(DataSupplier dataSupplier) {
         super(dataSupplier);
 
-        fss.operatorProperty().set(FileSizeStrategy.Operator.EQUAL);
+        fss.operatorProperty().set(Comparison.EQUAL);
         fns.setNameMatchStrategy(FileNameStrategy.NameMatchStrategy.CASE_SENSITIVE);
 
         a.set(fns);

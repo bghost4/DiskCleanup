@@ -13,7 +13,7 @@
 
 <fx:root maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="800.0" prefWidth="600.0" type="VBox" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
    <children>
-      <Label alignment="CENTER" maxWidth="1.7976931348623157E308" text="Find Duplicates">
+      <Label alignment="CENTER" maxWidth="1.7976931348623157E308" text="Find Files">
          <font>
             <Font size="20.0" />
          </font>
@@ -31,7 +31,7 @@
       <AnchorPane fx:id="apStrategyArea" prefWidth="200.0" VBox.vgrow="NEVER" />
       <HBox alignment="CENTER_RIGHT" prefWidth="200.0">
          <children>
-            <Button mnemonicParsing="false" onAction="#onFindDuplicates" text="Find Duplicates" />
+            <Button mnemonicParsing="false" onAction="#onFindFiles" text="Search" />
          </children>
       </HBox>
       <HBox prefWidth="200.0">

@@ -16,7 +16,7 @@ import javafx.fxml.FXML;
 import javafx.scene.layout.AnchorPane;
 import org.example.searchStrategy.*;
 
-public class FindDuplicatesUI extends VBox {
+public class FileFinder extends VBox {
 
     @FXML
     private ResourceBundle resources;
@@ -43,7 +43,7 @@ public class FindDuplicatesUI extends VBox {
     private TreeMap treeMap;
 
     @FXML
-    void onFindDuplicates(ActionEvent event) {
+    void onFindFiles(ActionEvent event) {
         if(searchContext.get() != null) {
             TreeItem<StatItem> root = searchContext.get().getRoot();
             List<TreeItem<StatItem>> result = TreeItemUtils.flatMapTreeItem(root).filter(TreeItemUtils::isRegularFile).filter(ti ->
@@ -71,12 +71,12 @@ public class FindDuplicatesUI extends VBox {
     }
 
 
-    public FindDuplicatesUI(DataSupplier s) {
+    public FileFinder(DataSupplier s) {
         super();
 
         dataSupplier = s;
 
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/findDuplicatesUI.fxml"));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/fileFinder.fxml"));
         loader.setRoot(this);
         loader.setController(this);
         try {
@@ -96,9 +96,9 @@ public class FindDuplicatesUI extends VBox {
 
     @FXML
     void initialize() {
-        assert apStrategyArea != null : "fx:id=\"apStrategyArea\" was not injected: check your FXML file 'findDuplicatesUI.fxml'.";
-        assert cboStrategy != null : "fx:id=\"cboStrategy\" was not injected: check your FXML file 'findDuplicatesUI.fxml'.";
-        assert lstFoundFiles != null : "fx:id=\"lstFoundFiles\" was not injected: check your FXML file 'findDuplicatesUI.fxml'.";
+        assert apStrategyArea != null : "fx:id=\"apStrategyArea\" was not injected: check your FXML file 'fileFinder.fxml'.";
+        assert cboStrategy != null : "fx:id=\"cboStrategy\" was not injected: check your FXML file 'fileFinder.fxml'.";
+        assert lstFoundFiles != null : "fx:id=\"lstFoundFiles\" was not injected: check your FXML file 'fileFinder.fxml'.";
 
         System.out.println("Initialize Called");
 
@@ -128,7 +128,10 @@ public class FindDuplicatesUI extends VBox {
             }
         });
 
-        lstFoundFiles.getSelectionModel().selectedItemProperty().addListener((ob,ov,nv) -> searchContext.get().getSelectionModel().select(nv));
+        lstFoundFiles.getSelectionModel().selectedItemProperty().addListener((ob,ov,nv) -> {
+            searchContext.get().getSelectionModel().select(nv);
+            searchContext.get().scrollTo(searchContext.get().getRow(nv));
+        });
 
         lblResultsize.textProperty().bind(Bindings.format("%d Files Found",Bindings.size(lstFoundFiles.getItems())));
 

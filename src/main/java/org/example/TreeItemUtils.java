@@ -69,21 +69,24 @@ public class TreeItemUtils {
         return Files.isDirectory(statItemTreeItem.getValue().p());
     }
 
+    public static Stream<TreeItem<?>> pathToRoot(TreeItem<?> item,Stream<TreeItem<?>> visited) {
+        Stream<TreeItem<?>> updatedVisited = Stream.concat(Stream.of(item),visited);
+        if(item.getParent() == null) {
+            return updatedVisited;
+        } else {
+            return pathToRoot(item.getParent(),updatedVisited);
+        }
+    }
+
+    public static Stream<TreeItem<?>> pathToRoot(TreeItem<?> item) {
+        return pathToRoot(item,Stream.empty());
+    }
+
     public static void recursiveExpand(TreeItem<?> item) {
-        if(item.getParent() == null) { return; }
-        item.getParent().setExpanded(true);
-        recursiveExpand(item.getParent());
+        pathToRoot(item).forEach(ti -> ti.setExpanded(true));
     }
 
     public static boolean isChildOf(TreeItem<StatItem> haystack,TreeItem<StatItem> needle) {
-        TreeItem<StatItem> last = needle;
-        if(haystack == needle) { return true; }
-        while(last.getParent() != null) {
-            if(last.getParent() == haystack) {
-                return true;
-            }
-            last = last.getParent();
-        }
-        return false;
+        return pathToRoot(needle).anyMatch(ti -> ti == haystack);
     }
 }
