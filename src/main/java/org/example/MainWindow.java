@@ -4,6 +4,8 @@ import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.concurrent.ScheduledService;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
@@ -24,7 +26,7 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
-import org.example.searchStrategy.FileExtStrategy;
+import org.example.searchStrategy.*;
 
 import java.awt.*;
 import java.io.File;
@@ -38,7 +40,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class MainWindow extends VBox {
+public class MainWindow extends VBox implements DataSupplier {
 
     @FXML
     private Label lStatus;
@@ -66,7 +68,14 @@ public class MainWindow extends VBox {
     @FXML
     private TableColumn<FileClassSizeCount,String> tcExt;
 
-    private Random random = new Random();
+
+
+    private final Random random = new Random();
+
+    private final ObservableList<String> fileTypes = FXCollections.observableArrayList();
+    private final ObservableList<String> fileExts = FXCollections.observableArrayList();
+    private final ObservableList<StrategyBase> strategies = FXCollections.observableArrayList();
+
 
     @FXML
     private ProgressBar pbMemUsage;
@@ -108,6 +117,31 @@ public class MainWindow extends VBox {
         generateFileTypeLegend();
     }
 
+    @Override
+    public ObservableList<StrategyBase> getStrategies() {
+        return strategies;
+    }
+
+    @Override
+    public ObservableList<String> fileExtensions() {
+        return fileExts;
+    }
+
+    @Override
+    public ObservableList<String> fileTypes() {
+        return fileTypes;
+    }
+
+    @Override
+    public TreeTableView<StatItem> getTreeView() {
+        return ttFileView;
+    }
+
+    @Override
+    public TreeMap getTreeMap() {
+        return treeMap;
+    }
+
     private record FileClassSizeCount(String type, long size, long count) {
         public static FileClassSizeCount fromPath(Path p) {
             if(Files.isDirectory(p)) {
@@ -139,7 +173,7 @@ public class MainWindow extends VBox {
     @FXML
     private void onFindDuplicates(ActionEvent e) {
             Stage stage = new Stage();
-            FindDuplicatesUI ui = new FindDuplicatesUI();
+            FindDuplicatesUI ui = new FindDuplicatesUI(this);
             ui.searchContextProperty().set(ttFileView);
             ui.setTreeMap(treeMap);
             Scene s = new Scene(ui);
@@ -193,8 +227,6 @@ public class MainWindow extends VBox {
         }
         me.setExpanded(true);
 
-
-
         NestedTask<FileScannerTask> nt = new NestedTask<>(exec,
                 me.getChildren().stream().filter(ti -> Files.isDirectory(ti.getValue().p()))
                         .map(FileScannerTask::new).collect(Collectors.toList()));
@@ -220,6 +252,15 @@ public class MainWindow extends VBox {
 
             generateFileTypeLegend();
             treeMap.setContext(me);
+
+            fileExts.setAll(
+                TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(ti -> Files.isRegularFile(ti.getValue().p())).map(item -> item.getValue().ext()).distinct().toList()
+            );
+
+            fileTypes.setAll(
+                    TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(ti -> Files.isRegularFile(ti.getValue().p())).map(item -> item.getValue().type()).distinct().toList()
+            );
+
 
         });
         exec.execute(nt);
@@ -282,6 +323,14 @@ public class MainWindow extends VBox {
             }
         });
 
+        strategies.setAll(
+          new FileNameStrategy(),
+          new FileExtStrategy(fileExts),
+          new ExactNameAndSize(),
+          new CompositeAndStrategy(this),
+          new CompositeOrStrategy(this)
+        );
+
         tcCount.setCellValueFactory(vf -> new ReadOnlyObjectWrapper<>(vf.getValue().count) );
         tcExt.setCellValueFactory(vf -> new ReadOnlyObjectWrapper<>(vf.getValue().type) );
         tcExt.setCellFactory(cdf -> new TableCell<>(){
@@ -317,7 +366,11 @@ public class MainWindow extends VBox {
             ttFileView.getSelectionModel().clearSelection(); //clear selection from Tree View
             if(nv != null ) {
                 final String type = nv.type();
-                treeMap.setSelection(() -> TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(ti ->  type.equals(TreeItemUtils.getExtension(ti))));
+                if(cboLegendSelect.getValue().equals("File Type")) {
+                    treeMap.setSelection(() -> TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(ti -> type.equals(ti.getValue().type())));
+                } else {
+                    treeMap.setSelection(() -> TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(ti -> type.equals(ti.getValue().ext())));
+                }
             } else {
                 treeMap.clearSelection();
             }
@@ -360,10 +413,21 @@ public class MainWindow extends VBox {
         MenuItem miShowFiles = new MenuItem("Show Files");
             miShowFiles.setOnAction(eh -> {
                 Stage stage = new Stage();
-                FileExtStrategy fns = new FileExtStrategy();
-                    fns.setTypes(colorPicker.keySet().stream().sorted().toList());
-                    fns.setSelectedType(tblStats.getSelectionModel().getSelectedItem().type());
-                FindDuplicatesUI ui = new FindDuplicatesUI(ttFileView,treeMap,fns);
+                StrategyBase strategy;
+
+                if(cboLegendSelect.getValue().equals("File Type")) {
+                    FileTypeStrategy fts  = new FileTypeStrategy(fileTypes);
+                    fts.setTypes(fileTypes);
+                    fts.setSelectedType(tblStats.getSelectionModel().getSelectedItem().type());
+                    strategy = fts;
+                } else {
+                    FileExtStrategy fns = new FileExtStrategy(fileExts);
+                    fns.setExtensions(fileExts);
+                    fns.setSelectedExtension(tblStats.getSelectionModel().getSelectedItem().type());
+                    strategy = fns;
+                }
+
+                FindDuplicatesUI ui = new FindDuplicatesUI(this);
                 Scene s = new Scene(ui);
                 stage.setScene(s);
                 stage.setTitle("Find File Type");
@@ -469,18 +533,18 @@ public class MainWindow extends VBox {
         tcSize.setSortType(TableColumn.SortType.DESCENDING);
         tblStats.getSortOrder().add(tcSize);
 
-        Function<StatItem,String> mappingFunction = i -> i.ext();
+        Function<StatItem,String> mappingFunction = StatItem::ext;
 
         if(cboLegendSelect.getValue().equals("Extension")) {
-            mappingFunction = i -> i.ext();
+            mappingFunction = StatItem::ext;
             tcExt.setText("Ext");
         } else if(cboLegendSelect.getValue().equals("File Type")) {
-            mappingFunction = i -> i.type();
+            mappingFunction = StatItem::type;
             tcExt.setText("Type");
         }
 
         Map<String,List<StatItem>> result = TreeItemUtils.flatMapTreeItemUnwrap(ttFileView.getRoot()).filter(item -> Files.isRegularFile(item.p())).collect(Collectors.groupingBy(mappingFunction));
-        List<FileClassSizeCount> items =  result.entrySet().stream().map(e -> new FileClassSizeCount(e.getKey(),e.getValue().stream().mapToLong(si -> si.length()).sum(),e.getValue().size())).toList();
+        List<FileClassSizeCount> items =  result.entrySet().stream().map(e -> new FileClassSizeCount(e.getKey(),e.getValue().stream().mapToLong(StatItem::length).sum(),e.getValue().size())).toList();
         tblStats.getItems().setAll(items);
         tblStats.getItems().sort(Comparator.comparingLong(FileClassSizeCount::size).reversed());
         treeMap.setTypePainter(this::getPaint);

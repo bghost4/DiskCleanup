@@ -10,13 +10,11 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.List;
 import java.util.ResourceBundle;
+
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.layout.AnchorPane;
-import org.example.searchStrategy.CompositeAndStrategy;
-import org.example.searchStrategy.FileExtStrategy;
-import org.example.searchStrategy.FileNameStrategy;
-import org.example.searchStrategy.StrategyBase;
+import org.example.searchStrategy.*;
 
 public class FindDuplicatesUI extends VBox {
 
@@ -34,6 +32,8 @@ public class FindDuplicatesUI extends VBox {
 
     private final SimpleObjectProperty<StrategyBase> strategy = new SimpleObjectProperty<>();
 
+    private final DataSupplier dataSupplier;
+
     @FXML
     private ListView<TreeItem<StatItem>> lstFoundFiles;
 
@@ -46,7 +46,7 @@ public class FindDuplicatesUI extends VBox {
     void onFindDuplicates(ActionEvent event) {
         if(searchContext.get() != null) {
             TreeItem<StatItem> root = searchContext.get().getRoot();
-            List<TreeItem<StatItem>> result = TreeItemUtils.flatMapTreeItem(root).filter( ti ->
+            List<TreeItem<StatItem>> result = TreeItemUtils.flatMapTreeItem(root).filter(TreeItemUtils::isRegularFile).filter(ti ->
                     cboStrategy.getValue().getPredicate().test(ti)
             ).toList();
             if(treeMap != null) {
@@ -71,18 +71,10 @@ public class FindDuplicatesUI extends VBox {
     }
 
 
-    public FindDuplicatesUI(TreeTableView<StatItem> tree,TreeMap treeMap,StrategyBase strategy) {
-        this();
-
-        System.out.println("Setting Constructor Values");
-        setSearchContext(tree);
-        setTreeMap(treeMap);
-        setStrategy(strategy);
-
-    }
-
-    public FindDuplicatesUI() {
+    public FindDuplicatesUI(DataSupplier s) {
         super();
+
+        dataSupplier = s;
 
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/findDuplicatesUI.fxml"));
         loader.setRoot(this);
@@ -92,7 +84,6 @@ public class FindDuplicatesUI extends VBox {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
     }
 
     @FXML
@@ -141,17 +132,15 @@ public class FindDuplicatesUI extends VBox {
 
         lblResultsize.textProperty().bind(Bindings.format("%d Files Found",Bindings.size(lstFoundFiles.getItems())));
 
+        cboStrategy.getItems().setAll(dataSupplier.getStrategies());
+
         if(strategy.get() != null) {
-            System.out.println("Strategy was set to: "+strategy.get().getName());
-            cboStrategy.getItems().add(strategy.get());
+           cboStrategy.setValue(strategy.get());
         } else {
-            System.out.println("Strategy was null");
-            cboStrategy.getItems().addAll(
-                    new FileNameStrategy(),
-                    new FileExtStrategy(),
-                    new CompositeAndStrategy());
+           cboStrategy.setValue(cboStrategy.getItems().get(0));
         }
-        cboStrategy.setValue(cboStrategy.getItems().get(0));
+
+        setTreeMap(dataSupplier.getTreeMap());
     }
 
     public void setStrategy(StrategyBase b) {

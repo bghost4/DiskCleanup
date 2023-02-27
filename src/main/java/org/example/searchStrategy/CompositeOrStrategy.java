@@ -5,12 +5,12 @@ import org.example.StatItem;
 
 import java.util.function.Predicate;
 
-public class CompositeAndStrategy extends CompositeStrategy {
+public class CompositeOrStrategy extends CompositeStrategy {
 
-    public CompositeAndStrategy(DataSupplier s) {
+    public CompositeOrStrategy(DataSupplier s) {
         super(s);
 
-        lblSubName.setText("And");
+        lblSubName.setText("Or");
 
     }
 
@@ -24,11 +24,11 @@ public class CompositeAndStrategy extends CompositeStrategy {
         if(tglInvertB.isSelected()) {
             pB = pB.negate();
         }
-        return pA.and(pB);
+        return pA.or(pB);
     }
 
     @Override
     public String getName() {
-        return "And";
+        return "Or";
     }
 }
