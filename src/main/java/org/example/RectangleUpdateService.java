@@ -34,15 +34,14 @@ public class RectangleUpdateService extends Service<Void>{
         //Variables to attempt to optimize snoozeTime and segmentSize
         private long lastRuntime = 0;
 
-        private final int minSegments = 10;
-        private final int minSnooze = 5;
-
-        public void reportLastUpdateTime(Long millis) {
+    public void reportLastUpdateTime(Long millis) {
             long updateTime = millis;
             if(updateTime > snoozeTime) {
                 //we are probably hanging up the application thread
                 System.out.println("Stuttering: update("+ updateTime +") snooze("+snoozeTime+")");
-                segmentSize = Math.max(segmentSize - (segmentSize/4),minSegments); //decrease segmentsize by 25%
+                int minSegments = 10;
+                segmentSize = Math.max(segmentSize - (segmentSize/4), minSegments); //decrease segmentsize by 25%
+                int minSnooze = 5;
                 snoozeTime = Math.max(minSnooze,snoozeTime + (snoozeTime/4)); //increase snooze time by 25%
             }
         }

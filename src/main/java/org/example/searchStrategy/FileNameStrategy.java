@@ -101,6 +101,7 @@ public class FileNameStrategy extends StrategyBase {
             return ti -> ti.getValue().p().getFileName().toString().matches(txtName.getText());
         } else {
             //if you got here, you did something wrong
+            System.err.println("File Name Strategy :: getPredicate - something went wrong");
             return ti -> false;
         }
 

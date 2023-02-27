@@ -326,7 +326,9 @@ public class MainWindow extends VBox implements DataSupplier {
         strategies.setAll(
           new FileNameStrategy(),
           new FileExtStrategy(fileExts),
-          new ExactNameAndSize(),
+          new FileTypeStrategy(fileTypes),
+          new FileSizeStrategy(),
+          new ExactNameAndSize(this),
           new CompositeAndStrategy(this),
           new CompositeOrStrategy(this)
         );
@@ -476,6 +478,15 @@ public class MainWindow extends VBox implements DataSupplier {
 
 
     private void findDuplicates(TreeItem<StatItem> selectedItem) {
+        Stage stage = new Stage();
+        FindDuplicatesUI dupui = new FindDuplicatesUI(this);
+        ExactNameAndSize strategy = new ExactNameAndSize(this);
+            strategy.fileNameProperty().set(selectedItem.getValue().p().getFileName().toString());
+            strategy.fileSizeProperty().set(selectedItem.getValue().length());
+        dupui.setStrategy(strategy);
+        Scene s = new Scene(dupui);
+        stage.setScene(s);
+        stage.show();
     }
 
     private void zoomIn(TreeItem<StatItem> item) {

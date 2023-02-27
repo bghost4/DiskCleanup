@@ -132,6 +132,7 @@ public class FindDuplicatesUI extends VBox {
 
         lblResultsize.textProperty().bind(Bindings.format("%d Files Found",Bindings.size(lstFoundFiles.getItems())));
 
+        searchContext.set(dataSupplier.getTreeView());
         cboStrategy.getItems().setAll(dataSupplier.getStrategies());
 
         if(strategy.get() != null) {

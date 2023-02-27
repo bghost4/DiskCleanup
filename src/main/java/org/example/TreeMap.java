@@ -37,7 +37,6 @@ public class TreeMap extends StackPane {
     private final SimpleObjectProperty<BiConsumer<MouseEvent,TreeItem<StatItem>>> mouseHandler = new SimpleObjectProperty<>();
 
     private final Pane pUsage = new Pane();
-    private final ProgressIndicator spinnymajig = new ProgressIndicator();
 
     private final RectangleUpdateService rectangleUpdater = new RectangleUpdateService();
 
@@ -139,6 +138,7 @@ public class TreeMap extends StackPane {
         super();
 
         //Keep progress indicator from getting mouse events
+        ProgressIndicator spinnymajig = new ProgressIndicator();
         spinnymajig.setMouseTransparent(true);
 
         getChildren().add(pUsage);
