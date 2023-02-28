@@ -362,6 +362,7 @@ public class MainWindow extends VBox implements DataSupplier {
           new FileNameStrategy(),
           new FileExtStrategy(fileExts),
           new FileTypeStrategy(fileTypes),
+          new FileTimeStrategy(),
           new FileOwnerStrategy(this),
           new FileSizeStrategy(),
           new ExactNameAndSize(this),
