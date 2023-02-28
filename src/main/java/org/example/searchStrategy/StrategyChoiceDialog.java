@@ -5,7 +5,7 @@ import javafx.scene.layout.HBox;
 
 public class StrategyChoiceDialog extends Dialog<StrategyBase> {
 
-    private final ComboBox<StrategyBase> cboStrategy;
+    private final ComboBox<String> cboStrategy;
 
     public StrategyChoiceDialog(DataSupplier s) {
         super();
@@ -19,7 +19,7 @@ public class StrategyChoiceDialog extends Dialog<StrategyBase> {
         getDialogPane().getButtonTypes().addAll(ButtonType.OK,ButtonType.CANCEL);
         setResultConverter(eh -> {
             if(eh == ButtonType.OK) {
-                return cboStrategy.getValue();
+                return s.getStrategyByName(cboStrategy.getValue()).get();
             } else {
                 return null;
             }

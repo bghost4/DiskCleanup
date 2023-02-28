@@ -28,7 +28,7 @@ public class FileFinder extends VBox {
     private AnchorPane apStrategyArea;
 
     @FXML
-    private ComboBox<StrategyBase> cboStrategy;
+    private ComboBox<String> cboStrategy;
 
     private final SimpleObjectProperty<StrategyBase> strategy = new SimpleObjectProperty<>();
 
@@ -47,7 +47,7 @@ public class FileFinder extends VBox {
         if(searchContext.get() != null) {
             TreeItem<StatItem> root = searchContext.get().getRoot();
             List<TreeItem<StatItem>> result = TreeItemUtils.flatMapTreeItem(root).filter(TreeItemUtils::isRegularFile).filter(ti ->
-                    cboStrategy.getValue().getPredicate().test(ti)
+                    strategy.get().getPredicate().test(ti)
             ).toList();
             if(treeMap != null) {
                 treeMap.setSelection(result::stream);
@@ -104,8 +104,9 @@ public class FileFinder extends VBox {
 
         cboStrategy.getSelectionModel().selectedItemProperty().addListener( ( ob,ov,nv) -> {
             if(nv != null) {
-                System.out.println("Selected: "+nv.getName());
-                Node settings = nv.getSettings();
+                dataSupplier.getStrategyByName(cboStrategy.getValue()).ifPresent(sb -> strategy.set(sb));
+                System.out.println("Selected: "+strategy.get().getName());
+                Node settings = strategy.get().getSettings();
                 AnchorPane.setTopAnchor(settings, 10.0);
                 AnchorPane.setLeftAnchor(settings, 10.0);
                 AnchorPane.setBottomAnchor(settings, 10.0);
@@ -139,7 +140,7 @@ public class FileFinder extends VBox {
         cboStrategy.getItems().setAll(dataSupplier.getStrategies());
 
         if(strategy.get() != null) {
-           cboStrategy.setValue(strategy.get());
+           cboStrategy.setValue(strategy.get().getName());
         } else {
            cboStrategy.setValue(cboStrategy.getItems().get(0));
         }
@@ -148,7 +149,7 @@ public class FileFinder extends VBox {
     }
 
     public void setStrategy(StrategyBase b) {
-        cboStrategy.setValue(b);
+        cboStrategy.setValue(b.getName());
     }
 
     public void setTreeMap(TreeMap treeMap) {

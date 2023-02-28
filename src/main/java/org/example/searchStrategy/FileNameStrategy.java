@@ -131,6 +131,6 @@ public class FileNameStrategy extends StrategyBase {
 
     @Override
     public String getName() {
-        return "Find Files Matching Name";
+        return "File Name";
     }
 }

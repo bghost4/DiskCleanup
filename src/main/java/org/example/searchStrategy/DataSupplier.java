@@ -6,10 +6,12 @@ import org.example.StatItem;
 import org.example.TreeMap;
 
 import java.nio.file.attribute.UserPrincipal;
+import java.util.Optional;
 
 public interface DataSupplier {
 
-    ObservableList<StrategyBase> getStrategies();
+    ObservableList<String> getStrategies();
+    Optional<StrategyBase> getStrategyByName(String name);
     ObservableList<String> fileExtensions();
     ObservableList<String> fileTypes();
 

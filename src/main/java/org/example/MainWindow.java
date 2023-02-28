@@ -79,7 +79,7 @@ public class MainWindow extends VBox implements DataSupplier {
 
     private final ObservableList<String> fileTypes = FXCollections.observableArrayList();
     private final ObservableList<String> fileExts = FXCollections.observableArrayList();
-    private final ObservableList<StrategyBase> strategies = FXCollections.observableArrayList();
+    private final ObservableList<String> strategies = FXCollections.observableArrayList();
     private final ObservableList<UserPrincipal> fileOwners = FXCollections.observableArrayList();
 
 
@@ -124,8 +124,25 @@ public class MainWindow extends VBox implements DataSupplier {
     }
 
     @Override
-    public ObservableList<StrategyBase> getStrategies() {
+    public ObservableList<String> getStrategies() {
         return strategies;
+    }
+
+    @Override
+    public Optional<StrategyBase> getStrategyByName(String name) {
+        //this is ugly
+        return switch(name) {
+            case "And" -> Optional.of(new CompositeAndStrategy(this));
+            case "Or" -> Optional.of(new CompositeOrStrategy(this));
+            case "File Name and Size" -> Optional.of(new ExactNameAndSize(this));
+            case "File Extension" -> Optional.of(new FileExtStrategy(fileExtensions()));
+            case "File Name" -> Optional.of(new FileNameStrategy());
+            case "File Owner" -> Optional.of(new FileOwnerStrategy(this));
+            case "File Size" -> Optional.of(new FileSizeStrategy());
+            case "File Time" -> Optional.of(new FileTimeStrategy());
+            case "File Type" -> Optional.of(new FileTypeStrategy(fileTypes()));
+            default -> Optional.empty();
+        };
     }
 
     @Override
@@ -359,15 +376,15 @@ public class MainWindow extends VBox implements DataSupplier {
         });
 
         strategies.setAll(
-          new FileNameStrategy(),
-          new FileExtStrategy(fileExts),
-          new FileTypeStrategy(fileTypes),
-          new FileTimeStrategy(),
-          new FileOwnerStrategy(this),
-          new FileSizeStrategy(),
-          new ExactNameAndSize(this),
-          new CompositeAndStrategy(this),
-          new CompositeOrStrategy(this)
+                "And",
+                "Or",
+                "File Name and Size",
+                "File Extension",
+                "File Name",
+                "File Owner",
+                "File Size",
+                "File Time",
+                "File Type"
         );
 
         tcCount.setCellValueFactory(vf -> new ReadOnlyObjectWrapper<>(vf.getValue().count) );
