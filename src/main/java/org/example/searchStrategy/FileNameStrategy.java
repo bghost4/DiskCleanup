@@ -90,7 +90,7 @@ public class FileNameStrategy extends StrategyBase {
             String intermediary = txtName.getText().replace(".","\\.").replace("*",".*").replace("?",".");
             try {
                 regexPattern = Pattern.compile(intermediary);
-                return ti -> ti.getValue().p().getFileName().toString().matches(intermediary);
+                return ti -> ti.getValue().p().getFileName().toString().matches("(?i)"+intermediary);
             } catch(PatternSyntaxException e) {
                 Alert a = new Alert(Alert.AlertType.ERROR);
                 a.setHeaderText("Error Constructing Wildcard");

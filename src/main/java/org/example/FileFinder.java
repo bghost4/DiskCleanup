@@ -103,9 +103,12 @@ public class FileFinder extends VBox {
         System.out.println("Initialize Called");
 
         cboStrategy.valueProperty().addListener((ob,ov,nv) -> {
-            if(!strategy.get().getName().equals(nv)) {
+            if(strategy.get() != null && strategy.get().getName().equals(nv)) {
+                //do nothing
+            } else {
                 dataSupplier.getStrategyByName(nv).ifPresent(sb -> strategy.set(sb));
             }
+
         });
 
         strategy.addListener(( ob,ov,nv) -> {
@@ -127,7 +130,7 @@ public class FileFinder extends VBox {
                 super.updateItem(item, empty);
 
                 if(item != null && !empty) {
-                    setText(item.getValue().p().toString());
+                    setText(TreeItemUtils.buildPath(item).toString());
                 } else {
                     setText(null);
                 }

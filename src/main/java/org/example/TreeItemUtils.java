@@ -8,6 +8,10 @@ import org.apache.tika.Tika;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Stream;
 
 public class TreeItemUtils {
@@ -44,16 +48,26 @@ public class TreeItemUtils {
         return statItemTreeItem.getValue().pathType() == PathType.DIRECTORY;
     }
 
-    public static Stream<TreeItem<?>> pathToRoot(TreeItem<?> item,Stream<TreeItem<?>> visited) {
-        Stream<TreeItem<?>> updatedVisited = Stream.concat(Stream.of(item),visited);
+    public static <T> Stream<TreeItem<T>> pathToRoot(TreeItem<T> item,Stream<TreeItem<T>> previouslyVisited) {
+        Stream<TreeItem<T>> visited = Stream.concat(Stream.of(item),previouslyVisited);
         if(item.getParent() == null) {
-            return updatedVisited;
+            return visited;
         } else {
-            return pathToRoot(item.getParent(),updatedVisited);
+            return pathToRoot(item.getParent(),visited);
         }
     }
 
-    public static Stream<TreeItem<?>> pathToRoot(TreeItem<?> item) {
+    public static Path buildPath(TreeItem<StatItem> item) {
+        List<TreeItem<StatItem>> fullpath = pathToRoot(item).toList();
+        Path p = fullpath.get(0).getValue().p();
+        for(int i=1; i < fullpath.size(); i++) {
+            p = p.resolve(fullpath.get(i).getValue().p().toString());
+            System.out.println("\t"+p);
+        }
+        return p;
+    }
+
+    public static <T> Stream<TreeItem<T>> pathToRoot(TreeItem<T> item) {
         return pathToRoot(item,Stream.empty());
     }
 

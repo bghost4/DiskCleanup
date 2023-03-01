@@ -2,7 +2,6 @@ package org.example;
 
 import javafx.concurrent.Task;
 import javafx.scene.control.TreeItem;
-import org.apache.commons.io.FilenameUtils;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -27,8 +26,11 @@ public class FileScannerTask extends Task<List<TreeItem<StatItem>>> {
     @Override
     protected List<TreeItem<StatItem>> call(){
         try {
-            return Files.walk(parent.getValue().p(), 1)
-                    .flatMap(c -> c.equals(parent.getValue().p()) ? Stream.empty() : Stream.of(buildTree(c)))
+            Path path = TreeItemUtils.buildPath(parent);
+            //System.out.println("File Scanner Call: "+path);
+
+            return Files.walk(path, 1)
+                    .flatMap(c -> c.getFileName().equals(parent.getValue().p().getFileName()) ? Stream.empty() : Stream.of(buildTree(path,c)))
                     .sorted(Comparator.comparingLong((TreeItem<StatItem> i) -> i.getValue().length()).reversed())
                     .toList();
         } catch(Exception e) {
@@ -37,13 +39,14 @@ public class FileScannerTask extends Task<List<TreeItem<StatItem>>> {
         }
     }
 
-    private TreeItem<StatItem> buildTree(Path childPath) {
-        TreeItem<StatItem> childItem = new TreeItem<>(StatItem.empty(childPath));
+    private TreeItem<StatItem> buildTree(Path parent,Path childPath) {
+        //System.out.println("Build Tree Called on: "+childPath);
+        TreeItem<StatItem> childItem = new TreeItem<>(StatItem.empty(parent.relativize(childPath)));
         if(Files.isRegularFile(childPath)) {
             try {
                 BasicFileAttributes bfa = Files.readAttributes(childPath, BasicFileAttributes.class);
                 FileOwnerAttributeView foa = Files.getFileAttributeView(childPath,FileOwnerAttributeView.class);
-                childItem.setValue(new StatItem(childPath,PathType.FILE,false,childPath.toFile().length(), typeExtractor.apply(childPath), FilenameUtils.getExtension(childPath.getFileName().toString()),bfa.creationTime().toInstant(),bfa.lastModifiedTime().toInstant(),foa.getOwner()));
+                childItem.setValue(new StatItem(parent.relativize(childPath),PathType.FILE,false,childPath.toFile().length(), typeExtractor.apply(childPath), FilenameUtils.getExtension(childPath),bfa.creationTime().toInstant(),bfa.lastModifiedTime().toInstant(),foa.getOwner()));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -52,7 +55,7 @@ public class FileScannerTask extends Task<List<TreeItem<StatItem>>> {
         } else if(Files.isDirectory(childPath)) {
             try {
                 List<TreeItem<StatItem>> children = Files.walk(childPath, 1)
-                        .flatMap(c -> c.equals(childPath) ? Stream.empty() : Stream.of(buildTree(c)))
+                        .flatMap(c -> c.getFileName().equals(childPath.getFileName()) ? Stream.empty() : Stream.of(buildTree(childPath,c)))
                         .sorted(Comparator.comparingLong((TreeItem<StatItem> i) -> i.getValue().length()).reversed())
                         .toList();
                 childItem.getChildren().addAll(children);

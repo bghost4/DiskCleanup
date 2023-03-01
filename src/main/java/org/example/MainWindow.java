@@ -26,8 +26,6 @@ import javafx.scene.shape.Rectangle;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.tika.Tika;
 import org.controlsfx.control.BreadCrumbBar;
 import org.example.searchStrategy.*;
@@ -112,8 +110,8 @@ public class MainWindow extends VBox implements DataSupplier {
                     double percent = 1 - ((double) Runtime.getRuntime().freeMemory() / (double) Runtime.getRuntime().totalMemory());
                     String text = String.format(
                             "%s Free of %s",
-                            FileUtils.byteCountToDisplaySize(Runtime.getRuntime().freeMemory()),
-                            FileUtils.byteCountToDisplaySize(Runtime.getRuntime().totalMemory())
+                            FileSizeSuffix.format(Runtime.getRuntime().freeMemory()),
+                            FileSizeSuffix.format(Runtime.getRuntime().totalMemory())
                     );
                     Platform.runLater(() -> {
                         pbMemUsage.setProgress(percent);
@@ -256,17 +254,18 @@ public class MainWindow extends VBox implements DataSupplier {
         };
 
         try {
+            System.out.println("Scanning Folder: "+si.p());
             me.getChildren().addAll(Files.walk(si.p(), 1)
                     .filter(p -> !p.equals(si.p()))
                     .map(p -> {
                         if(Files.isDirectory(p)) {
-                            return new TreeItem<>(StatItem.empty(p));
+                            return new TreeItem<>(StatItem.empty(si.p().relativize(p)));
                         } else {
                             try {
                                 BasicFileAttributes bfa = Files.readAttributes(p, BasicFileAttributes.class);
                                 FileOwnerAttributeView foa = Files.getFileAttributeView(p,FileOwnerAttributeView.class);
                                 return new TreeItem<>(
-                                        new StatItem(p, PathType.FILE,false, p.toFile().length(),typeExtractor.apply(p), FilenameUtils.getExtension(p.getFileName().toString()), bfa.creationTime().toInstant(), bfa.lastModifiedTime().toInstant(),foa.getOwner())
+                                        new StatItem(si.p().relativize(p), PathType.FILE,false, p.toFile().length(),typeExtractor.apply(p), FilenameUtils.getExtension(p), bfa.creationTime().toInstant(), bfa.lastModifiedTime().toInstant(),foa.getOwner())
                                 );
                             } catch(IOException e) {
                                 return new TreeItem<>(StatItem.empty(p));
@@ -280,7 +279,7 @@ public class MainWindow extends VBox implements DataSupplier {
         me.setExpanded(true);
 
         NestedTask<FileScannerTask> nt = new NestedTask<>(exec,
-                me.getChildren().stream().filter(ti -> Files.isDirectory(ti.getValue().p()))
+                me.getChildren().stream().filter(ti -> Files.isDirectory(TreeItemUtils.buildPath(ti)))
                         .map(v -> new FileScannerTask(v,typeExtractor)).collect(Collectors.toList()));
 
         nt.getDependants().forEach(fst -> fst.setOnSucceeded(eh -> {
@@ -350,7 +349,7 @@ public class MainWindow extends VBox implements DataSupplier {
                     setText(null);
                     setGraphic(null);
                 } else {
-                    setText(FileUtils.byteCountToDisplaySize(item));
+                    setText(FileSizeSuffix.format(item));
                 }
             }
         });
@@ -362,6 +361,8 @@ public class MainWindow extends VBox implements DataSupplier {
                     StatItem subItem = this.getTableRow().getItem();
                     if(subItem != null && subItem.isProcesing()) {
                         ProgressIndicator pi = new ProgressIndicator();
+                        pi.setPrefHeight(16);
+                        pi.setPrefWidth(16);
                         pi.setMaxWidth(16);
                         pi.setMaxHeight(16);
                         setGraphic(pi);
@@ -390,7 +391,7 @@ public class MainWindow extends VBox implements DataSupplier {
                 if(item == null || empty) {
                     setText(null);
                 } else {
-                    setText(FileUtils.byteCountToDisplaySize(item));
+                    setText(FileSizeSuffix.format(item));
                 }
             }
         });
@@ -541,11 +542,12 @@ public class MainWindow extends VBox implements DataSupplier {
                 miOpenFolder.setOnAction(eh -> openFolder(ttFileView.getSelectionModel().getSelectedItem()));
             } else {
                 miOpenFolder.setOnAction( eh -> {
-                    TreeItem<StatItem> p = ttFileView.getSelectionModel().getSelectedItem();
-                    if(TreeItemUtils.isRegularFile(p)) {
-                        p = p.getParent();
+                    TreeItem<StatItem> item = ttFileView.getSelectionModel().getSelectedItem();
+                    if(item.getValue().pathType()==PathType.FILE) {
+                        openPath(item.getParent());
+                    } else {
+                        openPath(item);
                     }
-                    openPath(p);
                 });
             }
 
@@ -617,7 +619,8 @@ public class MainWindow extends VBox implements DataSupplier {
 
     private void openPath(TreeItem<StatItem> item) {
         if(item == null) { return; }
-        Path p = item.getValue().p();
+        Path p = TreeItemUtils.buildPath(item);
+        System.out.println("Opening Path: "+p);
 
             Runnable r = () -> {
                 try {
@@ -645,7 +648,7 @@ public class MainWindow extends VBox implements DataSupplier {
         }
 
         Map<String,List<StatItem>> result = TreeItemUtils.flatMapTreeItemUnwrap(ttFileView.getRoot()).filter(item -> item.pathType() == PathType.FILE).collect(Collectors.groupingBy(mappingFunction));
-        List<FileClassSizeCount> items =  result.entrySet().stream().map(e -> new FileClassSizeCount(e.getKey(),e.getValue().stream().mapToLong(StatItem::length).sum(),e.getValue().size())).sorted(Comparator.comparingLong(ftc -> ftc.size)).toList();
+        List<FileClassSizeCount> items =  result.entrySet().stream().map(e -> new FileClassSizeCount(e.getKey(),e.getValue().stream().mapToLong(StatItem::length).sum(),e.getValue().size())).sorted(Comparator.comparingLong(FileClassSizeCount::size).reversed()).toList();
         tblStats.getItems().setAll(items);
         //tblStats.getItems().sort(Comparator.comparingLong(FileClassSizeCount::size).reversed());
         treeMap.setTypePainter(this::getPaint);
