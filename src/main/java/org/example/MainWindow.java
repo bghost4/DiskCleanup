@@ -339,7 +339,7 @@ public class MainWindow extends VBox implements DataSupplier {
         createTreeContextMenu();
         ttcName.setMaxWidth(1f * Integer.MAX_VALUE * 80);
         ttcSize.setMaxWidth(1f * Integer.MAX_VALUE * 20);
-        ttcName.setCellValueFactory( vf -> new ReadOnlyStringWrapper(vf.getValue().getValue().p().getFileName().toString()) );
+        ttcName.setCellValueFactory( vf -> new ReadOnlyStringWrapper(vf.getValue().getValue().toString() ));
         ttcSize.setCellValueFactory( vf -> new ReadOnlyObjectWrapper<>( vf.getValue().getValue().length()) );
         ttcSize.setCellFactory(vf -> new TreeTableCell<>(){
             @Override
