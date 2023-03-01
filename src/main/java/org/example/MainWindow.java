@@ -243,13 +243,13 @@ public class MainWindow extends VBox implements DataSupplier {
         //Try to use filename to limit file IO, if we get the generic Application/octet-stream try and dig in
         Function<Path,String> typeExtractor = (p) -> {
             String type = tika.detect(p.getFileName().toString());
-            if(type.equals("application/octet-stream")){
-                try {
-                    return tika.detect(p);
-                } catch (IOException e) {
-                    return type;
-                }
-            }
+//            if(type.equals("application/octet-stream")){
+//                try {
+//                    return tika.detect(p);
+//                } catch (IOException e) {
+//                    return type;
+//                }
+//            }
             return type;
         };
 

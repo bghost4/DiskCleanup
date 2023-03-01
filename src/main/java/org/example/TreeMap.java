@@ -166,7 +166,9 @@ public class TreeMap extends StackPane {
             } else {
                 if(TreeItemUtils.flatMapTreeItem(ov).anyMatch(ti -> ti == nv)) {
                     treeMapPacker.restart();
-                    shader.get().setVisible(false);
+                    if(shader.get() != null) {
+                        shader.get().setVisible(false);
+                    }
                 } else {
                     generateTreeMap(nv);
                 }
@@ -250,6 +252,7 @@ public class TreeMap extends StackPane {
 
     public void refresh() {
         System.out.println("Refresh Called");
+        pUsage.getChildren().clear();
         treeMapPacker.restart();
     }
 
