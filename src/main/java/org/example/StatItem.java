@@ -18,6 +18,9 @@ public record StatItem(Path p, PathType pathType,boolean isProcesing, long lengt
 
     @Override
     public String toString() {
+        if(p().getFileName() == null) { //Happens on Windows with C:\
+            return p().toString();
+        }
         return p().getFileName().toString();
     }
 }
