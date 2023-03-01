@@ -62,7 +62,6 @@ public class TreeItemUtils {
         Path p = fullpath.get(0).getValue().p();
         for(int i=1; i < fullpath.size(); i++) {
             p = p.resolve(fullpath.get(i).getValue().p().toString());
-            System.out.println("\t"+p);
         }
         return p;
     }
