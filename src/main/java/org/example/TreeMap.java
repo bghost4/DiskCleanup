@@ -252,7 +252,7 @@ public class TreeMap extends StackPane {
 
     public void refresh() {
         System.out.println("Refresh Called");
-        pUsage.getChildren().clear();
+        //pUsage.getChildren().clear(); Causes Treemap to be empty on a zoom in
         treeMapPacker.restart();
     }
 
