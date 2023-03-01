@@ -1,11 +1,12 @@
 package org.example;
 
 import javafx.application.Platform;
+import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.BooleanExpression;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.*;
+import javafx.beans.value.ObservableValue;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.event.EventHandler;
@@ -35,6 +36,9 @@ public class TreeMap extends StackPane {
 
     private final SimpleObjectProperty<TreeItem<StatItem>> context = new SimpleObjectProperty<>();
     private final SimpleObjectProperty<BiConsumer<MouseEvent,TreeItem<StatItem>>> mouseHandler = new SimpleObjectProperty<>();
+
+    public SimpleBooleanProperty busy = new SimpleBooleanProperty();
+
 
     private final Pane pUsage = new Pane();
 
@@ -224,7 +228,17 @@ public class TreeMap extends StackPane {
                         )
         );
 
+        List<ObservableValue<Boolean>> lstStatus = List.of(
+                    treeMapPacker.runningProperty(),
+                    rectangleCreator.runningProperty(),
+                    rectangleUpdater.runningProperty(),
+                    shadeMaker.runningProperty()
+            );
+
+        busy.bind(Bindings.createBooleanBinding(() -> lstStatus.stream().anyMatch(ObservableValue::getValue),lstStatus.toArray(new Observable[]{})));
     }
+
+    public ReadOnlyBooleanProperty busyProperty() { return busy; }
 
     public void setSelection(Supplier<Stream<TreeItem<StatItem>>> s) {
         selection.set(s);
@@ -237,6 +251,10 @@ public class TreeMap extends StackPane {
     public void refresh() {
         System.out.println("Refresh Called");
         treeMapPacker.restart();
+    }
+
+    public void rebuild() {
+        generateTreeMap(context.get());
     }
 
     public void clearSelection() {

@@ -81,11 +81,11 @@
             </VBox>
          </items>
       </SplitPane>
-      <HBox prefWidth="200.0" VBox.vgrow="NEVER">
-         <children>
-            <Label fx:id="lStatus" alignment="CENTER" maxWidth="1.7976931348623157E308" text="Status Label" HBox.hgrow="ALWAYS" />
-            <ProgressBar fx:id="pbMemUsage" prefWidth="200.0" progress="0.0" />
-         </children>
-      </HBox>
+       <HBox prefWidth="200.0" VBox.vgrow="NEVER">
+           <Label fx:id="lStatus" alignment="CENTER_LEFT" maxWidth="Infinity" text="Idle" HBox.hgrow="ALWAYS"/>
+           <Label fx:id="lMemStatus" alignment="CENTER_RIGHT" maxWidth="1.7976931348623157E308" text="Memory Usage"
+                  HBox.hgrow="SOMETIMES"/>
+           <ProgressBar fx:id="pbMemUsage" prefWidth="200.0" progress="0.0"/>
+       </HBox>
    </children>
 </fx:root>

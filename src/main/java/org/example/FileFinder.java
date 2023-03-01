@@ -102,9 +102,16 @@ public class FileFinder extends VBox {
 
         System.out.println("Initialize Called");
 
-        cboStrategy.valueProperty().addListener( ( ob,ov,nv) -> {
-            if(nv != null) {
+        cboStrategy.valueProperty().addListener((ob,ov,nv) -> {
+            if(!strategy.get().getName().equals(nv)) {
                 dataSupplier.getStrategyByName(nv).ifPresent(sb -> strategy.set(sb));
+            }
+        });
+
+        strategy.addListener(( ob,ov,nv) -> {
+            if(nv != null) {
+                System.out.println("Strategy Set to "+nv.getName());
+                cboStrategy.setValue(nv.getName());
                 Node settings = strategy.get().getSettings();
                 AnchorPane.setTopAnchor(settings, 10.0);
                 AnchorPane.setLeftAnchor(settings, 10.0);
@@ -138,18 +145,11 @@ public class FileFinder extends VBox {
         searchContext.set(dataSupplier.getTreeView());
         cboStrategy.getItems().setAll(dataSupplier.getStrategies());
 
-        if(strategy.get() != null) {
-           cboStrategy.setValue(strategy.get().getName());
-        } else {
-           cboStrategy.setValue(cboStrategy.getItems().get(0));
-        }
-
         setTreeMap(dataSupplier.getTreeMap());
     }
 
     public void setStrategy(StrategyBase b) {
         strategy.set(b);
-        cboStrategy.setValue(b.getName());
     }
 
     public void setTreeMap(TreeMap treeMap) {

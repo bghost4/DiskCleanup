@@ -1,8 +1,11 @@
 package org.example;
 
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.ScheduledService;
@@ -37,6 +40,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileOwnerAttributeView;
 import java.nio.file.attribute.UserPrincipal;
+import java.security.Principal;
 import java.util.List;
 import java.util.*;
 import java.util.concurrent.*;
@@ -48,6 +52,9 @@ public class MainWindow extends VBox implements DataSupplier {
 
     @FXML
     private Label lStatus;
+
+    @FXML
+    private Label lMemStatus;
 
     @FXML
     private AnchorPane pUsageView;
@@ -110,7 +117,7 @@ public class MainWindow extends VBox implements DataSupplier {
                     );
                     Platform.runLater(() -> {
                         pbMemUsage.setProgress(percent);
-                        lStatus.setText(text);
+                        lMemStatus.setText(text);
                     });
                     return null;
                 }
@@ -119,6 +126,8 @@ public class MainWindow extends VBox implements DataSupplier {
     };
 
     private final HashMap<String,Color> colorPicker = new HashMap<>();
+
+    private final BooleanProperty buildTreeRunning = new SimpleBooleanProperty(false);
 
     @Override
     public ObservableList<String> getStrategies() {
@@ -229,7 +238,9 @@ public class MainWindow extends VBox implements DataSupplier {
 
     private TreeItem<StatItem> buildTree(StatItem si) {
         System.out.println("Build Tree Started");
+        buildTreeRunning.set(true);
         TreeItem<StatItem> me = new TreeItem<>(si);
+        treeMap.setContext(me);
 
         //Try to use filename to limit file IO, if we get the generic Application/octet-stream try and dig in
         Function<Path,String> typeExtractor = (p) -> {
@@ -296,29 +307,27 @@ public class MainWindow extends VBox implements DataSupplier {
                     System.out.println("Generating File Type Legend");
                     generateFileTypeLegend();
                     System.out.println("Setting TreeMap Context");
-                    treeMap.setContext(me);
+                    treeMap.rebuild();
 
                 Runnable r = () -> {
                     //The following need not happen on the Application Thread, and we should probably process them all at once instead of mulling through the tree 3 times
                     System.out.println("Collecting File Extensions");
                     fileExts.setAll(
-                            TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(TreeItemUtils::isRegularFile).map(item -> item.getValue().ext()).distinct().toList()
+                            TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(TreeItemUtils::isRegularFile).map(item -> item.getValue().ext()).distinct().sorted().toList()
                     );
 
                     System.out.println("Collecting File Types");
                     fileTypes.setAll(
-                            TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(TreeItemUtils::isRegularFile).map(item -> item.getValue().type()).distinct().toList()
+                            TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(TreeItemUtils::isRegularFile).map(item -> item.getValue().type()).distinct().sorted().toList()
                     );
 
                     System.out.println("Collectiing File Owners");
                     fileOwners.setAll(
-                            TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(TreeItemUtils::isRegularFile).map(item -> item.getValue().owner()).distinct().toList()
+                            TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(TreeItemUtils::isRegularFile).map(item -> item.getValue().owner()).distinct().sorted(Comparator.comparing(Principal::getName)).toList()
                     );
                 };
                 exec.execute(r);
-
-
-                System.out.println("All File Operations Completed Successfully");
+                buildTreeRunning.set(false);
         });
         exec.execute(nt);
         System.out.println("Build Tree Finished");
@@ -387,15 +396,15 @@ public class MainWindow extends VBox implements DataSupplier {
         });
 
         strategies.setAll(
-                "And",
-                "Or",
-                "File Name and Size",
-                "File Extension",
                 "File Name",
-                "File Owner",
                 "File Size",
+                "File Type",
+                "File Extension",
                 "File Time",
-                "File Type"
+                "File Owner",
+                "File Name and Size",
+                "And",
+                "Or"
         );
 
         tcCount.setCellValueFactory(vf -> new ReadOnlyObjectWrapper<>(vf.getValue().count) );
@@ -474,6 +483,19 @@ public class MainWindow extends VBox implements DataSupplier {
         cboLegendSelect.setValue("Extension");
         cboLegendSelect.valueProperty().addListener(il -> generateFileTypeLegend());
 
+        lStatus.textProperty().bind(
+                Bindings.createStringBinding(() -> {
+                    if(buildTreeRunning.get()) {
+                        return "Scanning Folders";
+                    } else if(treeMap.busy.get()) {
+                        return "Updating Tree Map";
+                    } else {
+                        return "Idle";
+                    }
+                },buildTreeRunning,treeMap.busy)
+        );
+
+
     }
 
     private void createTableContextMenu() {
@@ -492,6 +514,7 @@ public class MainWindow extends VBox implements DataSupplier {
                 } else {
                     FileExtStrategy fns = new FileExtStrategy(fileExts);
                     fns.setExtensions(fileExts);
+                    System.out.println("Selected Ext: "+tblStats.getSelectionModel().getSelectedItem().fileClass());
                     fns.setSelectedExtension(tblStats.getSelectionModel().getSelectedItem().fileClass());
                     strategy = fns;
                 }
