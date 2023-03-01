@@ -3,7 +3,6 @@ package org.example;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.ScheduledService;
@@ -26,6 +25,7 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.tika.Tika;
 import org.controlsfx.control.BreadCrumbBar;
 import org.example.searchStrategy.*;
 
@@ -82,6 +82,7 @@ public class MainWindow extends VBox implements DataSupplier {
     private final ObservableList<String> strategies = FXCollections.observableArrayList();
     private final ObservableList<UserPrincipal> fileOwners = FXCollections.observableArrayList();
 
+    private final Tika tika = new Tika();
 
     @FXML
     private ProgressBar pbMemUsage;
@@ -89,7 +90,7 @@ public class MainWindow extends VBox implements DataSupplier {
     final TreeMap treeMap = new TreeMap();
 
     //TODO make this a prefrence
-    private final Executor exec = Executors.newFixedThreadPool(2, r -> {
+    private final Executor exec = Executors.newFixedThreadPool(4, r -> {
         Thread t = Executors.defaultThreadFactory().newThread(r);
         t.setDaemon(true);
         return t;
@@ -118,10 +119,6 @@ public class MainWindow extends VBox implements DataSupplier {
     };
 
     private final HashMap<String,Color> colorPicker = new HashMap<>();
-
-    private void changed(ObservableValue<? extends String> ob, String ov, String nv) {
-        generateFileTypeLegend();
-    }
 
     @Override
     public ObservableList<String> getStrategies() {
@@ -170,19 +167,7 @@ public class MainWindow extends VBox implements DataSupplier {
         return treeMap;
     }
 
-    private record FileClassSizeCount(String type, long size, long count) {
-        public static FileClassSizeCount fromPath(Path p) {
-            if(Files.isDirectory(p)) {
-                return new FileClassSizeCount("<Directory>",p.toFile().length(),1);
-            } else {
-                String type = TreeItemUtils.getExtension(p);
-                if(type.isBlank() || type.isEmpty()) {
-                    type = "<Typeless>";
-                }
-                return new FileClassSizeCount(type, p.toFile().length(), 1);
-            }
-        }
-    }
+    private record FileClassSizeCount(String fileClass, long size, long count) { }
 
     private Color randomColor() {
         return Color.rgb(random.nextInt(0,255),random.nextInt(0,255),random.nextInt(0,255));
@@ -243,7 +228,21 @@ public class MainWindow extends VBox implements DataSupplier {
     }
 
     private TreeItem<StatItem> buildTree(StatItem si) {
+        System.out.println("Build Tree Started");
         TreeItem<StatItem> me = new TreeItem<>(si);
+
+        //Try to use filename to limit file IO, if we get the generic Application/octet-stream try and dig in
+        Function<Path,String> typeExtractor = (p) -> {
+            String type = tika.detect(p.getFileName().toString());
+            if(type.equals("application/octet-stream")){
+                try {
+                    return tika.detect(p);
+                } catch (IOException e) {
+                    return type;
+                }
+            }
+            return type;
+        };
 
         try {
             me.getChildren().addAll(Files.walk(si.p(), 1)
@@ -256,7 +255,7 @@ public class MainWindow extends VBox implements DataSupplier {
                                 BasicFileAttributes bfa = Files.readAttributes(p, BasicFileAttributes.class);
                                 FileOwnerAttributeView foa = Files.getFileAttributeView(p,FileOwnerAttributeView.class);
                                 return new TreeItem<>(
-                                        new StatItem(p, false, p.toFile().length(),TreeItemUtils.getType(p), FilenameUtils.getExtension(p.getFileName().toString()), bfa.creationTime().toInstant(), bfa.lastModifiedTime().toInstant(),foa.getOwner())
+                                        new StatItem(p, PathType.FILE,false, p.toFile().length(),typeExtractor.apply(p), FilenameUtils.getExtension(p.getFileName().toString()), bfa.creationTime().toInstant(), bfa.lastModifiedTime().toInstant(),foa.getOwner())
                                 );
                             } catch(IOException e) {
                                 return new TreeItem<>(StatItem.empty(p));
@@ -271,7 +270,7 @@ public class MainWindow extends VBox implements DataSupplier {
 
         NestedTask<FileScannerTask> nt = new NestedTask<>(exec,
                 me.getChildren().stream().filter(ti -> Files.isDirectory(ti.getValue().p()))
-                        .map(FileScannerTask::new).collect(Collectors.toList()));
+                        .map(v -> new FileScannerTask(v,typeExtractor)).collect(Collectors.toList()));
 
         nt.getDependants().forEach(fst -> fst.setOnSucceeded(eh -> {
             TreeItem<StatItem> childItem = fst.getParent();
@@ -286,31 +285,43 @@ public class MainWindow extends VBox implements DataSupplier {
         }));
 
         nt.setOnSucceeded(eh -> {
-            me.getChildren().sort(Comparator.comparingLong((TreeItem<StatItem> ti) -> ti.getValue().length()).reversed());
+                    System.out.println("Sorting Root Child Nodes");
+                    me.getChildren().sort(Comparator.comparingLong((TreeItem<StatItem> ti) -> ti.getValue().length()).reversed());
 
-            me.setValue(me.getValue().update(
-                    me.getChildren().stream().mapToLong((TreeItem<StatItem> i) -> i.getValue().length()).sum()
-            ));
+                    System.out.println("Updating Root Item Size");
+                    me.setValue(me.getValue().update(
+                            me.getChildren().stream().mapToLong((TreeItem<StatItem> i) -> i.getValue().length()).sum()
+                    ));
 
-            generateFileTypeLegend();
-            treeMap.setContext(me);
+                    System.out.println("Generating File Type Legend");
+                    generateFileTypeLegend();
+                    System.out.println("Setting TreeMap Context");
+                    treeMap.setContext(me);
 
-            fileExts.setAll(
-                TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(ti -> Files.isRegularFile(ti.getValue().p())).map(item -> item.getValue().ext()).distinct().toList()
-            );
+                Runnable r = () -> {
+                    //The following need not happen on the Application Thread, and we should probably process them all at once instead of mulling through the tree 3 times
+                    System.out.println("Collecting File Extensions");
+                    fileExts.setAll(
+                            TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(TreeItemUtils::isRegularFile).map(item -> item.getValue().ext()).distinct().toList()
+                    );
 
-            fileTypes.setAll(
-                    TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(ti -> Files.isRegularFile(ti.getValue().p())).map(item -> item.getValue().type()).distinct().toList()
-            );
+                    System.out.println("Collecting File Types");
+                    fileTypes.setAll(
+                            TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(TreeItemUtils::isRegularFile).map(item -> item.getValue().type()).distinct().toList()
+                    );
 
-            fileOwners.setAll(
-                    TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(ti -> Files.isRegularFile(ti.getValue().p())).map(item -> item.getValue().owner()).distinct().toList()
-            );
+                    System.out.println("Collectiing File Owners");
+                    fileOwners.setAll(
+                            TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(TreeItemUtils::isRegularFile).map(item -> item.getValue().owner()).distinct().toList()
+                    );
+                };
+                exec.execute(r);
 
 
+                System.out.println("All File Operations Completed Successfully");
         });
         exec.execute(nt);
-
+        System.out.println("Build Tree Finished");
         return me;
     }
 
@@ -388,7 +399,7 @@ public class MainWindow extends VBox implements DataSupplier {
         );
 
         tcCount.setCellValueFactory(vf -> new ReadOnlyObjectWrapper<>(vf.getValue().count) );
-        tcExt.setCellValueFactory(vf -> new ReadOnlyObjectWrapper<>(vf.getValue().type) );
+        tcExt.setCellValueFactory(vf -> new ReadOnlyObjectWrapper<>(vf.getValue().fileClass) );
         tcExt.setCellFactory(cdf -> new TableCell<>(){
             @Override
             protected void updateItem(String item, boolean empty) {
@@ -423,7 +434,7 @@ public class MainWindow extends VBox implements DataSupplier {
         tblStats.getSelectionModel().selectedItemProperty().addListener((ob,ov,nv) -> {
             ttFileView.getSelectionModel().clearSelection(); //clear selection from Tree View
             if(nv != null ) {
-                final String type = nv.type();
+                final String type = nv.fileClass();
                 if(cboLegendSelect.getValue().equals("File Type")) {
                     treeMap.setSelection(() -> TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(ti -> type.equals(ti.getValue().type())));
                 } else {
@@ -476,12 +487,12 @@ public class MainWindow extends VBox implements DataSupplier {
                 if(cboLegendSelect.getValue().equals("File Type")) {
                     FileTypeStrategy fts  = new FileTypeStrategy(fileTypes);
                     fts.setTypes(fileTypes);
-                    fts.setSelectedType(tblStats.getSelectionModel().getSelectedItem().type());
+                    fts.setSelectedType(tblStats.getSelectionModel().getSelectedItem().fileClass());
                     strategy = fts;
                 } else {
                     FileExtStrategy fns = new FileExtStrategy(fileExts);
                     fns.setExtensions(fileExts);
-                    fns.setSelectedExtension(tblStats.getSelectionModel().getSelectedItem().type());
+                    fns.setSelectedExtension(tblStats.getSelectionModel().getSelectedItem().fileClass());
                     strategy = fns;
                 }
 
@@ -602,7 +613,6 @@ public class MainWindow extends VBox implements DataSupplier {
         tblStats.getSortOrder().add(tcSize);
 
         Function<StatItem,String> mappingFunction = StatItem::ext;
-
         if(cboLegendSelect.getValue().equals("Extension")) {
             mappingFunction = StatItem::ext;
             tcExt.setText("Ext");
@@ -611,10 +621,10 @@ public class MainWindow extends VBox implements DataSupplier {
             tcExt.setText("Type");
         }
 
-        Map<String,List<StatItem>> result = TreeItemUtils.flatMapTreeItemUnwrap(ttFileView.getRoot()).filter(item -> Files.isRegularFile(item.p())).collect(Collectors.groupingBy(mappingFunction));
-        List<FileClassSizeCount> items =  result.entrySet().stream().map(e -> new FileClassSizeCount(e.getKey(),e.getValue().stream().mapToLong(StatItem::length).sum(),e.getValue().size())).toList();
+        Map<String,List<StatItem>> result = TreeItemUtils.flatMapTreeItemUnwrap(ttFileView.getRoot()).filter(item -> item.pathType() == PathType.FILE).collect(Collectors.groupingBy(mappingFunction));
+        List<FileClassSizeCount> items =  result.entrySet().stream().map(e -> new FileClassSizeCount(e.getKey(),e.getValue().stream().mapToLong(StatItem::length).sum(),e.getValue().size())).sorted(Comparator.comparingLong(ftc -> ftc.size)).toList();
         tblStats.getItems().setAll(items);
-        tblStats.getItems().sort(Comparator.comparingLong(FileClassSizeCount::size).reversed());
+        //tblStats.getItems().sort(Comparator.comparingLong(FileClassSizeCount::size).reversed());
         treeMap.setTypePainter(this::getPaint);
     }
 

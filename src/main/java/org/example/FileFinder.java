@@ -102,10 +102,9 @@ public class FileFinder extends VBox {
 
         System.out.println("Initialize Called");
 
-        cboStrategy.getSelectionModel().selectedItemProperty().addListener( ( ob,ov,nv) -> {
+        cboStrategy.valueProperty().addListener( ( ob,ov,nv) -> {
             if(nv != null) {
-                dataSupplier.getStrategyByName(cboStrategy.getValue()).ifPresent(sb -> strategy.set(sb));
-                System.out.println("Selected: "+strategy.get().getName());
+                dataSupplier.getStrategyByName(nv).ifPresent(sb -> strategy.set(sb));
                 Node settings = strategy.get().getSettings();
                 AnchorPane.setTopAnchor(settings, 10.0);
                 AnchorPane.setLeftAnchor(settings, 10.0);
@@ -149,6 +148,7 @@ public class FileFinder extends VBox {
     }
 
     public void setStrategy(StrategyBase b) {
+        strategy.set(b);
         cboStrategy.setValue(b.getName());
     }
 

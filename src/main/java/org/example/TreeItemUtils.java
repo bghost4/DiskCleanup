@@ -12,8 +12,6 @@ import java.util.stream.Stream;
 
 public class TreeItemUtils {
 
-    public static final Tika typeDetector = new Tika();
-
     public static <A> Stream<A> flatMapTreeItemUnwrap(TreeItem<A> item) {
         return Stream.concat(Stream.of(item.getValue()),item.getChildren().stream().flatMap(TreeItemUtils::flatMapTreeItemUnwrap));
     }
@@ -21,7 +19,6 @@ public class TreeItemUtils {
     public static <A> Stream<TreeItem<A>> flatMapTreeItem(TreeItem<A> item) {
         return Stream.concat(Stream.of(item),item.getChildren().stream().flatMap(TreeItemUtils::flatMapTreeItem));
     }
-
 
     public static String getFriendlySize(TreeItem<StatItem> item) {
         return FileUtils.byteCountToDisplaySize(item.getValue().length());
@@ -32,29 +29,7 @@ public class TreeItemUtils {
     }
 
     public static String getExtension(TreeItem<StatItem> item) {
-        return getExtension(item.getValue().p());
-    }
-
-    public static String getExtension(Path p) {
-        if(Files.isDirectory(p)) {
-            return "<Directory>";
-        } else {
-            String type = FilenameUtils.getExtension(p.getFileName().toString());
-            if(type.isBlank() || type.isEmpty()) {
-                return "<Typeless>";
-            } else {
-                return type;
-            }
-        }
-    }
-
-    //This might be slow?
-    public static String getType(Path p) {
-        try {
-            return typeDetector.detect(p);
-        } catch(IOException e) {
-            return "<ERROR>";
-        }
+        return item.getValue().ext();
     }
 
     public static String getType(TreeItem<StatItem> item) {
@@ -62,11 +37,11 @@ public class TreeItemUtils {
     }
 
     public static boolean isRegularFile(TreeItem<StatItem> statItemTreeItem) {
-        return Files.isRegularFile(statItemTreeItem.getValue().p());
+        return statItemTreeItem.getValue().pathType() == PathType.FILE;
     }
 
     public static boolean isDirectory(TreeItem<StatItem> statItemTreeItem) {
-        return Files.isDirectory(statItemTreeItem.getValue().p());
+        return statItemTreeItem.getValue().pathType() == PathType.DIRECTORY;
     }
 
     public static Stream<TreeItem<?>> pathToRoot(TreeItem<?> item,Stream<TreeItem<?>> visited) {

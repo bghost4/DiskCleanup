@@ -12,12 +12,15 @@ import java.nio.file.attribute.FileOwnerAttributeView;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 public class FileScannerTask extends Task<List<TreeItem<StatItem>>> {
     private final TreeItem<StatItem> parent;
+    private final Function<Path,String> typeExtractor;
 
-    public FileScannerTask(TreeItem<StatItem> start){
+    public FileScannerTask(TreeItem<StatItem> start,Function<Path,String> typeExtractor){
+        this.typeExtractor = typeExtractor;
         this.parent = start;
     }
 
@@ -40,7 +43,7 @@ public class FileScannerTask extends Task<List<TreeItem<StatItem>>> {
             try {
                 BasicFileAttributes bfa = Files.readAttributes(childPath, BasicFileAttributes.class);
                 FileOwnerAttributeView foa = Files.getFileAttributeView(childPath,FileOwnerAttributeView.class);
-                childItem.setValue(new StatItem(childPath,false,childPath.toFile().length(),TreeItemUtils.getType(childPath), FilenameUtils.getExtension(childPath.getFileName().toString()),bfa.creationTime().toInstant(),bfa.lastModifiedTime().toInstant(),foa.getOwner()));
+                childItem.setValue(new StatItem(childPath,PathType.FILE,false,childPath.toFile().length(), typeExtractor.apply(childPath), FilenameUtils.getExtension(childPath.getFileName().toString()),bfa.creationTime().toInstant(),bfa.lastModifiedTime().toInstant(),foa.getOwner()));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
