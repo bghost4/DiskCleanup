@@ -234,6 +234,11 @@ public class MainWindow extends VBox implements DataSupplier {
             ttFileView.setRoot(buildTree(StatItem.empty(rootPath)));
     }
 
+    @FXML
+    private void onFlushTreeMap(ActionEvent e) {
+        treeMap.flush();
+    }
+
     private TreeItem<StatItem> buildTree(StatItem si) {
         buildTreeRunning.set(true);
         TreeItem<StatItem> me = new TreeItem<>(si);

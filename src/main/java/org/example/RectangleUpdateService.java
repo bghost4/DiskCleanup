@@ -78,8 +78,6 @@ public class RectangleUpdateService extends Service<Void>{
                 protected Void call() throws Exception {
                     System.out.println("Rectangle Updater Started");
                     if(packingOrder != null && packingOrder.size() > 0) {
-                        //process the list in 100 item chunks
-                        //todo set the number of items to break into a property
                         int i = 0;
                         while( i < packingOrder.size() ) {
                             List<Pair<Rectangle,Bound>> items = new ArrayList<>(segmentSize);
@@ -97,7 +95,7 @@ public class RectangleUpdateService extends Service<Void>{
                                 }
                             }
 
-                            Thread.sleep(snoozeTime); //give the poor application thread some room to breathe
+                            //give the poor application thread some room to breathe
                             final List<Pair<Rectangle,Bound>> cp = new ArrayList<>(items); //shallow copy
                             Platform.runLater(() -> {
                                 updateLastRuntime(System.currentTimeMillis());
@@ -109,6 +107,7 @@ public class RectangleUpdateService extends Service<Void>{
                                 });
                                 reportLastUpdateTime(System.currentTimeMillis() - lastRuntime);
                             });
+                            Thread.yield();
                         }
                     } else {
                         System.err.println("Packing List was null or empty");

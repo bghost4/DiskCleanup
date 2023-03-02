@@ -31,6 +31,7 @@
             <items>
               <MenuItem mnemonicParsing="false" onAction="#onFindFiles" text="Find Files" />
                   <MenuItem mnemonicParsing="false" onAction="#onGraphTypeUsage" text="Graph File Type Usage" />
+                <MenuItem mnemonicParsing="false" onAction="#onFlushTreeMap" text="Flush Tree Map" />
             </items>
           </Menu>
           <Menu mnemonicParsing="false" text="Help">

@@ -138,6 +138,8 @@ public class TreeMap extends StackPane {
             }
     }
 
+    private Rectangle shade = new Rectangle();
+
     public TreeMap() {
         super();
 
@@ -148,6 +150,15 @@ public class TreeMap extends StackPane {
         getChildren().add(pUsage);
         getChildren().add(new Group());
         getChildren().add(spinnymajig);
+
+        shade.setFill(Color.WHITE);
+        shade.mouseTransparentProperty().set(true);
+        shade.setOpacity(0.75);
+        shade.setX(0);
+        shade.setY(0);
+        shade.widthProperty().bind(pUsage.widthProperty());
+        shade.heightProperty().bind(pUsage.heightProperty());
+        pUsage.getChildren().add(shade);
 
         //These events really need to kick off when the user is done dragging the window to size
             widthProperty().addListener( (ob,ov,nv) -> {
@@ -208,9 +219,31 @@ public class TreeMap extends StackPane {
         selection.addListener( (ob,ov,nv) ->
         {
             if(nv != null) {
-               shadeMaker.restart();
+                shade.setVisible(true);
+                shade.toFront();
+                if(!pUsage.getChildren().contains(shade)) {
+                    pUsage.getChildren().add(shade);
+                }
+                Task<Void> tUpdate = new Task<Void>() {
+                    @Override
+                    protected Void call() throws Exception {
+                        nv.get().flatMap(ti -> Optional.ofNullable(pathToRect.get(ti)).stream()).forEach(Rectangle::toFront);
+                        return null;
+                    }
+                };
+
+                tUpdate.setOnSucceeded(eh -> pUsage.layout());
+
+                Thread t = new Thread(tUpdate);
+                t.setDaemon(true);
+                t.start();
+
+
+
+               //shadeMaker.restart();
             } else {
-                pUsage.getChildren().remove(shader.get());
+                //pUsage.getChildren().remove(shader.get());
+                shade.toBack();
             }
         });
 
@@ -258,6 +291,13 @@ public class TreeMap extends StackPane {
 
     public void rebuild() {
         generateTreeMap(context.get());
+    }
+
+    public void flush() {
+        pUsage.getChildren().clear();
+        rectToPath.clear();
+        pathToRect.clear();
+        System.gc();
     }
 
     public void clearSelection() {
