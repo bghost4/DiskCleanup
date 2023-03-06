@@ -156,6 +156,8 @@ public class DuplicateUI extends VBox {
             if(nv != null) {
                 if(nv.getValue().isItem()) {
                     supplier.getTreeView().getSelectionModel().select(nv.getValue().getItem());
+                } else {
+                    supplier.getTreeMap().setSelection(() -> nv.getChildren().stream().map(ti -> ti.getValue().getItem()));
                 }
             }
         });
