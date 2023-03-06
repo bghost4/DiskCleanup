@@ -242,6 +242,16 @@ public class TreeMap extends StackPane {
             );
 
         busy.bind(Bindings.createBooleanBinding(() -> lstStatus.stream().anyMatch(ObservableValue::getValue),lstStatus.toArray(new Observable[]{})));
+
+        enabled.addListener((ob,ov,nv) -> {
+            if(nv) {
+                generateTreeMap(context.get());
+            } else {
+                pUsage.getChildren().clear();
+                System.gc();
+            }
+        });
+
     }
 
     public ReadOnlyBooleanProperty busyProperty() { return busy; }

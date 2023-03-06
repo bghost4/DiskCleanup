@@ -65,7 +65,7 @@ public class DuplicateUI extends VBox {
                     List<TreeItem<StatItem>> firstSort = TreeItemUtils.flatMapTreeItem(supplier.getTreeView().getRoot())
                             .filter(ti -> (ti.getValue().pathType() == PathType.FILE && ti.getValue().length() > minFileSize))
                             .collect(Collectors.groupingBy(ti -> ti.getValue().length()))
-                            .entrySet().stream().filter(es -> es.getValue().size() > 2)
+                            .entrySet().stream().filter(es -> es.getValue().size() > 1)
                             .flatMap(es -> es.getValue().stream())
                             .collect(Collectors.toList());
                     //size of list is work total, index is work done when this gets turned into a Task
@@ -142,6 +142,8 @@ public class DuplicateUI extends VBox {
         assert progress != null : "fx:id=\"progress\" was not injected: check your FXML file 'duplicate.fxml'.";
         assert tvDuplicates != null : "fx:id=\"tvDuplicates\" was not injected: check your FXML file 'duplicate.fxml'.";
 
+        progress.setProgress(0);
+
         btnAction.setOnAction(this::onFind);
         btnAction.textProperty().bind(Bindings.createStringBinding(() -> duplicateService.isRunning() ? "Cancel" : "Find Duplicates",duplicateService.runningProperty()));
         progress.progressProperty().bind(duplicateService.progressProperty());
@@ -156,11 +158,14 @@ public class DuplicateUI extends VBox {
             if(nv != null) {
                 if(nv.getValue().isItem()) {
                     supplier.getTreeView().getSelectionModel().select(nv.getValue().getItem());
+                    supplier.getTreeView().scrollTo(supplier.getTreeView().getRow(nv.getValue().getItem()));
                 } else {
                     supplier.getTreeMap().setSelection(() -> nv.getChildren().stream().map(ti -> ti.getValue().getItem()));
                 }
             }
         });
+
+        progress.disableProperty().bind(duplicateService.runningProperty().not());
 
     }
 
@@ -169,6 +174,7 @@ public class DuplicateUI extends VBox {
             duplicateService.cancel();
         } else {
             minFileSize = cboUnit.getValue().toBytes(spnMajorSize.getValue());
+            System.out.println("Min File Size is: "+minFileSize+" Bytes");
             duplicateService.restart();
         }
 

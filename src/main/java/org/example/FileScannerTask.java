@@ -47,6 +47,7 @@ public class FileScannerTask extends Task<List<TreeItem<StatItem>>> {
                 PathType pt;
                 if(Files.isSymbolicLink(childPath)) {
                     pt = PathType.LINK;
+                    System.out.println("Found Link"+childPath);
                 } else {
                     pt = PathType.FILE;
                 }
