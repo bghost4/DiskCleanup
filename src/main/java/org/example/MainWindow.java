@@ -80,6 +80,9 @@ public class MainWindow extends VBox implements DataSupplier {
     @FXML
     private BreadCrumbBar<StatItem> breadCrumbBar;
 
+    @FXML
+    private CheckMenuItem miTreeMapEnabled;
+
     private final Random random = new Random();
 
     private final ObservableList<String> fileTypes = FXCollections.observableArrayList();
@@ -202,6 +205,16 @@ public class MainWindow extends VBox implements DataSupplier {
     }
 
     @FXML
+    private void onFindDuplicates(ActionEvent e) {
+        Stage stage = new Stage();
+        DuplicateUI ui = new DuplicateUI(this);
+        Scene s = new Scene(ui);
+        stage.setScene(s);
+        stage.show();
+    }
+
+
+    @FXML
     private void onGraphTypeUsage(ActionEvent e) {
 
     }
@@ -221,6 +234,8 @@ public class MainWindow extends VBox implements DataSupplier {
             //TODO display message about removing a root node
         }
     }
+
+
 
     private void recalcChildrenRecursive(TreeItem<StatItem> start) {
         long childrenSize = start.getChildren().stream().mapToLong(c -> c.getValue().length()).sum();
@@ -487,6 +502,8 @@ public class MainWindow extends VBox implements DataSupplier {
                 },buildTreeRunning,treeMap.busy)
         );
 
+        miTreeMapEnabled.setSelected(true); //Eventually make this a setting
+        treeMap.enabledProperty().bind(miTreeMapEnabled.selectedProperty());
 
     }
 

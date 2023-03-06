@@ -7,7 +7,7 @@ enum FileSizeSuffix {
     B(.9), kB(1e3), MB(1e6), GB(1e9), TB (1e12), PB(1e15); //, EB, ZB, YB, RB, QB If we get here deal with it then
     private final double limit;
     private final double exponent;
-    private FileSizeSuffix(double exponent) {
+    FileSizeSuffix(double exponent) {
         limit = 1.1 * exponent;
         this.exponent = exponent;
     }
@@ -26,6 +26,10 @@ enum FileSizeSuffix {
 
     public static String format(Number d) {
         return bestMatch(d.doubleValue()).map(s -> s.fmt(d.doubleValue())).orElse(B.fmt(d));
+    }
+
+    public long toBytes(long other) {
+        return (long)((double)other * this.exponent);
     }
 
 }

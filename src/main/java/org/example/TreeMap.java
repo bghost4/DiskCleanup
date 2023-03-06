@@ -123,9 +123,11 @@ public class TreeMap extends StackPane {
         }
     };
     private final ObjectProperty<Path> shader = new SimpleObjectProperty<>();
+    private final BooleanProperty enabled = new SimpleBooleanProperty(true);
 
     //Complete Regeneration of treeMap
     private void generateTreeMap(TreeItem<StatItem> root) {
+        if(!enabled.get()) { return; }
         pUsage.getChildren().clear();
         rectToPath.clear();
         pathToRect.clear();
@@ -161,6 +163,7 @@ public class TreeMap extends StackPane {
             });
 
         context.addListener((ob,ov,nv) -> {
+            if(!enabled.get()) { return; }
             if(ov == null) {
                 generateTreeMap(nv);
             } else {
@@ -207,6 +210,7 @@ public class TreeMap extends StackPane {
 
         selection.addListener( (ob,ov,nv) ->
         {
+            if(!enabled.get()) { return; }
             if(nv != null) {
                shadeMaker.restart();
             } else {
@@ -251,16 +255,17 @@ public class TreeMap extends StackPane {
     }
 
     public void refresh() {
-        System.out.println("Refresh Called");
-        //pUsage.getChildren().clear(); Causes Treemap to be empty on a zoom in
+        if(!enabled.get()) { return; }
         treeMapPacker.restart();
     }
 
     public void rebuild() {
+        if(!enabled.get()) { return; }
         generateTreeMap(context.get());
     }
 
     public void clearSelection() {
+        if(!enabled.get()) { return; }
         selection.set(null);
         shader.set(null);
     }
@@ -299,4 +304,7 @@ public class TreeMap extends StackPane {
     }
 
 
+    public BooleanProperty enabledProperty() {
+        return enabled;
+    }
 }
