@@ -188,7 +188,7 @@ public class MainWindow extends VBox implements DataSupplier {
         DirectoryChooser dc = new DirectoryChooser();
         File startDir = dc.showDialog(null);
 
-        if(startDir.isDirectory()) {
+        if(startDir != null && startDir.isDirectory()) {
             beginDirectoryScan(startDir.toPath());
         }
     }
