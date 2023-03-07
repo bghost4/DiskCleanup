@@ -17,6 +17,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.*;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
@@ -342,6 +343,12 @@ public class MainWindow extends VBox implements DataSupplier {
     private void initialize() {
         ttFileView.setColumnResizePolicy(TreeTableView.CONSTRAINED_RESIZE_POLICY);
         createTreeContextMenu();
+        javafx.scene.image.Image iFile,iFolder,iLink;
+
+        iFile = new javafx.scene.image.Image(getClass().getResourceAsStream("/file.png"));
+        iFolder = new javafx.scene.image.Image(getClass().getResourceAsStream("/folder.png"));
+        iLink = new javafx.scene.image.Image(getClass().getResourceAsStream("/link.png"));
+
         ttcName.setMaxWidth(1f * Integer.MAX_VALUE * 80);
         ttcSize.setMaxWidth(1f * Integer.MAX_VALUE * 20);
         ttcName.setCellValueFactory( vf -> new ReadOnlyStringWrapper(vf.getValue().getValue().toString() ));
@@ -372,7 +379,13 @@ public class MainWindow extends VBox implements DataSupplier {
                         pi.setMaxHeight(16);
                         setGraphic(pi);
                     } else {
-                        setGraphic(null);
+                        setGraphic(
+                            switch(this.getTableRow().getItem().pathType()){
+                                case FILE -> new ImageView(iFile);
+                                case LINK -> new ImageView(iLink);
+                                case DIRECTORY -> new ImageView(iFolder);
+                            }
+                        );
                     }
                     setText(item);
                 } else {

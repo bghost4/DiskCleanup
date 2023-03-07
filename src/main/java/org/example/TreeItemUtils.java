@@ -1,16 +1,7 @@
 package org.example;
 
 import javafx.scene.control.TreeItem;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
-import org.apache.tika.Tika;
-
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -22,10 +13,6 @@ public class TreeItemUtils {
 
     public static <A> Stream<TreeItem<A>> flatMapTreeItem(TreeItem<A> item) {
         return Stream.concat(Stream.of(item),item.getChildren().stream().flatMap(TreeItemUtils::flatMapTreeItem));
-    }
-
-    public static String getFriendlySize(TreeItem<StatItem> item) {
-        return FileUtils.byteCountToDisplaySize(item.getValue().length());
     }
 
     public static String relativize(TreeItem<StatItem> context,TreeItem<StatItem> other) {

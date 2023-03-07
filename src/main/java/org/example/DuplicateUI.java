@@ -1,6 +1,5 @@
 package org.example;
 
-import com.sun.source.tree.Tree;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.concurrent.Service;
@@ -10,7 +9,6 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 
-import java.io.DataInput;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Files;
