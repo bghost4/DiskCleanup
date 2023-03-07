@@ -96,11 +96,7 @@ public class DuplicateUI extends VBox {
                     updateMessage("Sorting Out Duplicates");
                     TreeItem<DTI> root = new TreeItem<DTI>(new DTI("Results"));
 
-
-                    List<String> keys = tree.keySet().stream().map(k -> new Pair<String,Long>(k,tree.get(k).stream().mapToLong(ti -> ti.getValue().length()).sum())).sorted(Comparator.comparingLong(p -> p.b())).map(p -> p.a()).collect(Collectors.toList());
-
-                    //ArrayList<String> keys = new ArrayList<>(tree.keySet().stream().toList());
-                    //keys.sort(Comparator.comparingLong(k -> tree.get(k).stream().mapToLong(ti->ti.getValue().length()).sum()).reversed());
+                    List<String> keys = tree.keySet().stream().map(k -> new Pair<String,Long>(k,tree.get(k).stream().mapToLong(ti -> ti.getValue().length()).sum())).sorted(Comparator.comparingLong((Pair<String,Long> p) -> p.b()).reversed()).map(p -> p.a()).collect(Collectors.toList());
 
                     for(int i=0; i < keys.size(); i++) {
                         String key = keys.get(i);
