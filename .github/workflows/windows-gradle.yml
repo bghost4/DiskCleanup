@@ -32,4 +32,4 @@ jobs:
       uses: gradle/gradle-build-action@67421db6bd0bf253fb4bd25b31ebb98943c375e1
       with:
         arguments: jpackageImage
-        path: build/jpackage/DiskCleanup-1.0.msi
+        path: build/jpackage
