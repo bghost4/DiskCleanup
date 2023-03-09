@@ -47,13 +47,12 @@ public class FileScannerTask extends Task<List<TreeItem<StatItem>>> {
                 PathType pt;
                 if(Files.isSymbolicLink(childPath)) {
                     pt = PathType.LINK;
-                    System.out.println("Found Link"+childPath);
                 } else {
                     pt = PathType.FILE;
                 }
                 BasicFileAttributes bfa = Files.readAttributes(childPath, BasicFileAttributes.class);
                 FileOwnerAttributeView foa = Files.getFileAttributeView(childPath,FileOwnerAttributeView.class);
-                childItem.setValue(new StatItem(parent.relativize(childPath),pt,false,childPath.toFile().length(), typeExtractor.apply(childPath), FilenameUtils.getExtension(childPath),bfa.creationTime().toInstant(),bfa.lastModifiedTime().toInstant(),foa.getOwner()));
+                childItem.setValue(new StatItem(parent.relativize(childPath),pt,false,pt == PathType.FILE ? childPath.toFile().length() : 0, typeExtractor.apply(childPath), FilenameUtils.getExtension(childPath),bfa.creationTime().toInstant(),bfa.lastModifiedTime().toInstant(),foa.getOwner()));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
