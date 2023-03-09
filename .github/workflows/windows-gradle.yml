@@ -31,12 +31,12 @@ jobs:
     - name: Build with Gradle
       uses: gradle/gradle-build-action@67421db6bd0bf253fb4bd25b31ebb98943c375e1
       with:
-        arguments: jpackage
+        arguments: jpackageImage
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: dist-msi
-        path: build/jpackage/*.msi
+        name: dist-windows-x64
+        path: build/image/*
 
   build_linux:
   
@@ -56,7 +56,7 @@ jobs:
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: dist-image
+        name: dist-linux-x64
         path: build/image/*
 
   build_mac:
@@ -78,4 +78,4 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: dist-mac
-        path: build/jpackage/*
+        path: build/image/*

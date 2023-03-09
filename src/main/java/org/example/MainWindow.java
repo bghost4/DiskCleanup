@@ -220,7 +220,7 @@ public class MainWindow extends VBox implements DataSupplier {
 
     }
 
-    private void delete(TreeItem<StatItem> item) {
+    private void hide(TreeItem<StatItem> item) {
         TreeItem<StatItem> parent = item.getParent();
         if(parent != null) {
             if(ttFileView.getSelectionModel().getSelectedItem() == item) {
@@ -276,10 +276,12 @@ public class MainWindow extends VBox implements DataSupplier {
                             return new TreeItem<>(StatItem.empty(si.p().relativize(p)));
                         } else {
                             try {
+                                PathType pt;
+                                pt = Files.isSymbolicLink(p) ? PathType.LINK : PathType.FILE;
                                 BasicFileAttributes bfa = Files.readAttributes(p, BasicFileAttributes.class);
                                 FileOwnerAttributeView foa = Files.getFileAttributeView(p,FileOwnerAttributeView.class);
                                 return new TreeItem<>(
-                                        new StatItem(si.p().relativize(p), PathType.FILE,false, p.toFile().length(),typeExtractor.apply(p), FilenameUtils.getExtension(p), bfa.creationTime().toInstant(), bfa.lastModifiedTime().toInstant(),foa.getOwner())
+                                        new StatItem(si.p().relativize(p), pt,false, pt == PathType.FILE ? p.toFile().length() : 0,typeExtractor.apply(p), FilenameUtils.getExtension(p), bfa.creationTime().toInstant(), bfa.lastModifiedTime().toInstant(),foa.getOwner())
                                 );
                             } catch(IOException e) {
                                 return new TreeItem<>(StatItem.empty(p));
@@ -571,8 +573,8 @@ public class MainWindow extends VBox implements DataSupplier {
                 });
             }
 
-        MenuItem miDeleteNode = new MenuItem("Delete (Not Really)");
-            miDeleteNode.setOnAction(eh -> delete(ttFileView.getSelectionModel().getSelectedItem()));
+        MenuItem miHideFile = new MenuItem("Hide");
+            miHideFile.setOnAction(eh -> hide(ttFileView.getSelectionModel().getSelectedItem()));
         MenuItem miZoomInto = new MenuItem("Zoom Into");
             miZoomInto.setOnAction(eh -> zoomIn(ttFileView.getSelectionModel().getSelectedItem()));
         MenuItem miZoomOut = new MenuItem("Zoom Out");
@@ -583,7 +585,7 @@ public class MainWindow extends VBox implements DataSupplier {
             miFindDuplicates.setOnAction(eh -> findDuplicates(ttFileView.getSelectionModel().getSelectedItem()));
         MenuItem miRebuildTree = new MenuItem("Rebuild Tree");
             miRebuildTree.setOnAction(eh -> treeMap.refresh() );
-        ctx.getItems().addAll(miSystemOpen,miOpenFolder,miDeleteNode,miRebuildTree,miZoomInto,miZoomOut,miZoomRoot,miFindDuplicates);
+        ctx.getItems().addAll(miSystemOpen,miOpenFolder,miHideFile,miRebuildTree,miZoomInto,miZoomOut,miZoomRoot,miFindDuplicates);
 
         ttFileView.setContextMenu(ctx);
     }
