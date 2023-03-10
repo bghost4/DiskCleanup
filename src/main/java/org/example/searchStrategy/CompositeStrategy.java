@@ -81,19 +81,7 @@ public abstract class CompositeStrategy extends StrategyBase {
             }
         });
 
-        BiConsumer<StrategyBase,ObjectProperty<StrategyBase>> handler = (nv,prop) -> {
-            if(nv instanceof CompositeStrategy cs) {
-                StrategyBase old = prop.get();
-                if(old != null) {
-                    prop.set(cs);
-                    cs.strategyAProperty().set(old);
-                } else {
-                    prop.set(nv);
-                }
-            } else {
-                prop.set(nv);
-            }
-        };
+
 
         btnChangeA.setOnAction(eh -> strategySelector.showAndWait().ifPresent(n -> handler.accept(n,a)));
         btnChangeB.setOnAction(eh -> strategySelector.showAndWait().ifPresent(n -> handler.accept(n,b)));
@@ -101,9 +89,46 @@ public abstract class CompositeStrategy extends StrategyBase {
     }
 
 
+    public static BiConsumer<StrategyBase,ObjectProperty<StrategyBase>> handler = (nv,prop) -> {
+        if(nv instanceof CompositeStrategy cs) {
+            StrategyBase old = prop.get();
+            if(old != null) {
+                if(old instanceof CompositeStrategy ocs) {
+                    prop.set(cs);
+                    cs.strategyAProperty().set(ocs.strategyAProperty().get());
+                    cs.strategyBProperty().set(ocs.strategyBProperty().get());
+                } else {
+                    prop.set(cs);
+                    cs.strategyAProperty().set(old);
+                }
+            } else {
+                prop.set(nv);
+            }
+        } else {
+            if(prop.get() != null && prop.get() instanceof CompositeStrategy ocs) {
+                System.out.println("Old Property Was Composite");
+                if(ocs.strategyAProperty().get() != null && ocs.strategyAProperty().get().getName().equals(nv.getName())) {
+                    System.out.println("\tNew Strategy Name Matched Field A, Using Setting from Old A");
+                    prop.set(ocs.strategyAProperty().get());
+                } else if (ocs.strategyBProperty().get() != null && ocs.strategyBProperty().get().getName().equals(nv.getName())) {
+                    System.out.println("\tNew Strategy Name Matched Field B, Using Setting from Old B");
+                    prop.set(ocs.strategyBProperty().get());
+                } else {
+                    System.out.println("New Strategy("+nv.getName()+") did not match: A("+ocs.strategyAProperty().get().getName()+") or B("+ocs.strategyBProperty().get().getName()+")");
+                    prop.set(nv);
+                }
+            } else {
+                prop.set(nv);
+            }
+        }
+    };
+
 
     public ObjectProperty<StrategyBase> strategyAProperty() { return a; }
     public ObjectProperty<StrategyBase> strategyBProperty() { return b; }
+
+    public StrategyBase getA() { return a.get(); }
+    public StrategyBase getB() { return b.get(); }
 
 
 }
