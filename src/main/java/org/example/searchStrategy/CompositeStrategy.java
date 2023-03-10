@@ -1,5 +1,6 @@
 package org.example.searchStrategy;
 
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Insets;
 import javafx.scene.Group;
@@ -11,6 +12,9 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 public abstract class CompositeStrategy extends StrategyBase {
 
@@ -77,10 +81,29 @@ public abstract class CompositeStrategy extends StrategyBase {
             }
         });
 
-        btnChangeA.setOnAction(eh -> strategySelector.showAndWait().ifPresent(a::set));
+        BiConsumer<StrategyBase,ObjectProperty<StrategyBase>> handler = (nv,prop) -> {
+            if(nv instanceof CompositeStrategy cs) {
+                StrategyBase old = prop.get();
+                if(old != null) {
+                    prop.set(cs);
+                    cs.strategyAProperty().set(old);
+                } else {
+                    prop.set(nv);
+                }
+            } else {
+                prop.set(nv);
+            }
+        };
 
-        btnChangeB.setOnAction(eh -> strategySelector.showAndWait().ifPresent(b::set));
+        btnChangeA.setOnAction(eh -> strategySelector.showAndWait().ifPresent(n -> handler.accept(n,a)));
+        btnChangeB.setOnAction(eh -> strategySelector.showAndWait().ifPresent(n -> handler.accept(n,b)));
 
     }
+
+
+
+    public ObjectProperty<StrategyBase> strategyAProperty() { return a; }
+    public ObjectProperty<StrategyBase> strategyBProperty() { return b; }
+
 
 }

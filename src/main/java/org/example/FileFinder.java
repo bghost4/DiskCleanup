@@ -106,7 +106,17 @@ public class FileFinder extends VBox {
             if(strategy.get() != null && strategy.get().getName().equals(nv)) {
                 //do nothing
             } else {
-                dataSupplier.getStrategyByName(nv).ifPresent(sb -> strategy.set(sb));
+                dataSupplier.getStrategyByName(nv).ifPresent(sb -> {
+                        if (sb instanceof CompositeStrategy cas) {
+                            StrategyBase old = strategy.get();
+                            strategy.set(sb);
+                            if(old != null) {
+                                cas.strategyAProperty().set(old);
+                            }
+                        } else {
+                            strategy.set(sb);
+                        }
+                });
             }
 
         });
