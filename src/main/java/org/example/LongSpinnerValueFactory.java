@@ -8,10 +8,10 @@ public class LongSpinnerValueFactory extends SpinnerValueFactory<Long>  {
     public LongSpinnerValueFactory() {
         super();
 
-        setConverter(new StringConverter<Long>() {
+        setConverter(new StringConverter<>() {
             @Override
             public String toString(Long object) {
-                return String.format("%d",object);
+                return String.format("%d", object);
             }
 
             @Override

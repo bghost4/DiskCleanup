@@ -21,7 +21,8 @@ public class NestedTask<T extends Task<?>> extends Task<Void> {
         dependants.forEach(executor::execute);
 
         while(!dependants.stream().allMatch(t -> t.isDone())) {
-            Thread.sleep(100);
+            //Thread.sleep(100);
+            Thread.yield();
         }
 
         return null;

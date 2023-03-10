@@ -2,14 +2,12 @@ package org.example.searchStrategy;
 
 import javafx.scene.Node;
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
 import javafx.scene.layout.HBox;
 import org.example.InstantStringConverter;
 import org.example.StatItem;
 
-import java.text.ParseException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -22,9 +20,10 @@ public class FileTimeStrategy extends StrategyBase {
     public enum TimeType { CREATION_TIME,LAST_MODIFIED_TIME }
     public enum SearchType { BEFORE,AFTER,BETWEEN }
 
-    ComboBox<TimeType> cboTimeType = new ComboBox<>();
-    ComboBox<SearchType> cboSearchType = new ComboBox<>();
-    TextField txtFirst = new TextField(),txtLast = new TextField();
+    final ComboBox<TimeType> cboTimeType = new ComboBox<>();
+    final ComboBox<SearchType> cboSearchType = new ComboBox<>();
+    final TextField txtFirst = new TextField();
+    final TextField txtLast = new TextField();
 
     private final Node settingsNode;
 
@@ -40,13 +39,7 @@ public class FileTimeStrategy extends StrategyBase {
         txtFirst.setText(isc.toString(now));
         txtLast.setText(isc.toString(now));
 
-        cboSearchType.valueProperty().addListener(il -> {
-            if(cboSearchType.getValue().equals(SearchType.BETWEEN)) {
-                txtLast.setDisable(false);
-            } else {
-                txtLast.setDisable(true);
-            }
-        });
+        cboSearchType.valueProperty().addListener(il -> txtLast.setDisable(!cboSearchType.getValue().equals(SearchType.BETWEEN)));
 
         HBox hb = new HBox();
         hb.getChildren().addAll(cboTimeType,cboSearchType,txtFirst,txtLast);

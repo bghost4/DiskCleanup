@@ -11,42 +11,41 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<fx:root maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="600.0" type="VBox" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
-   <children>
-      <Label alignment="CENTER" maxWidth="1.7976931348623157E308" text="Find Duplicates">
-         <font>
-            <Font size="25.0" />
-         </font>
-      </Label>
-      <HBox prefWidth="200.0">
-         <children>
-            <Label maxHeight="1.7976931348623157E308" text="Ignore files smaller than: " />
-            <Spinner fx:id="spnMajorSize" />
-            <ComboBox fx:id="cboUnit" prefWidth="150.0" />
-         </children>
-         <VBox.margin>
-            <Insets bottom="5.0" left="10.0" right="10.0" top="5.0" />
-         </VBox.margin>
-      </HBox>
-      <ProgressBar fx:id="progress" maxWidth="1.7976931348623157E308" prefWidth="200.0" progress="0.0">
-         <VBox.margin>
-            <Insets left="10.0" right="10.0" />
-         </VBox.margin>
-      </ProgressBar>
-      <Label fx:id="lblStatus" maxWidth="1.7976931348623157E308" text="Label" VBox.vgrow="NEVER">
-         <VBox.margin>
-            <Insets left="10.0" right="10.0" />
-         </VBox.margin>
-      </Label>
-      <Button fx:id="btnAction" maxWidth="1.7976931348623157E308" mnemonicParsing="false" text="Find">
-         <VBox.margin>
-            <Insets left="10.0" right="10.0" />
-         </VBox.margin>
-      </Button>
-      <TreeView fx:id="tvDuplicates" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="200.0" prefWidth="400.0" VBox.vgrow="ALWAYS">
-         <VBox.margin>
-            <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
-         </VBox.margin>
-      </TreeView>
-   </children>
+<fx:root maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity"
+         prefHeight="600.0" prefWidth="600.0" type="VBox" xmlns="http://javafx.com/javafx/17"
+         xmlns:fx="http://javafx.com/fxml/1">
+   <Label alignment="CENTER" maxWidth="1.7976931348623157E308" text="Find Duplicates">
+      <font>
+         <Font size="25.0"/>
+      </font>
+   </Label>
+   <HBox prefWidth="200.0">
+      <VBox.margin>
+         <Insets bottom="5.0" left="10.0" right="10.0" top="5.0"/>
+      </VBox.margin>
+      <Label maxHeight="1.7976931348623157E308" text="Ignore files smaller than: "/>
+      <Spinner fx:id="spnMajorSize"/>
+      <ComboBox fx:id="cboUnit" prefWidth="150.0"/>
+   </HBox>
+   <ProgressBar fx:id="progress" maxWidth="1.7976931348623157E308" prefWidth="200.0" progress="0.0">
+      <VBox.margin>
+         <Insets left="10.0" right="10.0"/>
+      </VBox.margin>
+   </ProgressBar>
+   <Label fx:id="lblStatus" maxWidth="1.7976931348623157E308" text="Label" VBox.vgrow="NEVER">
+      <VBox.margin>
+         <Insets left="10.0" right="10.0"/>
+      </VBox.margin>
+   </Label>
+   <Button fx:id="btnAction" maxWidth="1.7976931348623157E308" mnemonicParsing="false" text="Find">
+      <VBox.margin>
+         <Insets left="10.0" right="10.0"/>
+      </VBox.margin>
+   </Button>
+   <TreeView fx:id="tvDuplicates" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308"
+             prefHeight="200.0" prefWidth="400.0" VBox.vgrow="ALWAYS">
+      <VBox.margin>
+         <Insets bottom="10.0" left="10.0" right="10.0" top="10.0"/>
+      </VBox.margin>
+   </TreeView>
 </fx:root>

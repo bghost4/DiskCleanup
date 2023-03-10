@@ -19,7 +19,7 @@ public class StrategyChoiceDialog extends Dialog<StrategyBase> {
         getDialogPane().getButtonTypes().addAll(ButtonType.OK,ButtonType.CANCEL);
         setResultConverter(eh -> {
             if(eh == ButtonType.OK) {
-                return s.getStrategyByName(cboStrategy.getValue()).get();
+                return s.getStrategyByName(cboStrategy.getValue()).orElse(null);
             } else {
                 return null;
             }

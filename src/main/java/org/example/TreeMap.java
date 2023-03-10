@@ -3,7 +3,6 @@ package org.example;
 import javafx.application.Platform;
 import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
-import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.BooleanExpression;
 import javafx.beans.property.*;
 import javafx.beans.value.ObservableValue;
@@ -37,7 +36,7 @@ public class TreeMap extends StackPane {
     private final SimpleObjectProperty<TreeItem<StatItem>> context = new SimpleObjectProperty<>();
     private final SimpleObjectProperty<BiConsumer<MouseEvent,TreeItem<StatItem>>> mouseHandler = new SimpleObjectProperty<>();
 
-    public SimpleBooleanProperty busy = new SimpleBooleanProperty();
+    public final SimpleBooleanProperty busy = new SimpleBooleanProperty();
 
 
     private final Pane pUsage = new Pane();

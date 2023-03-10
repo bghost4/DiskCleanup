@@ -11,39 +11,32 @@
 <?import javafx.scene.text.Font?>
 
 
-<fx:root maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="800.0" prefWidth="600.0" type="VBox" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
-   <children>
-      <Label alignment="CENTER" maxWidth="1.7976931348623157E308" text="Find Files">
-         <font>
-            <Font size="20.0" />
-         </font>
+<fx:root maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="800.0"
+         prefWidth="600.0" type="VBox" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
+   <Label alignment="CENTER" maxWidth="1.7976931348623157E308" text="Find Files">
+      <font>
+         <Font size="20.0"/>
+      </font>
+   </Label>
+   <HBox prefWidth="200.0">
+      <Label text="Strategy"/>
+      <ComboBox fx:id="cboStrategy" prefWidth="150.0">
+         <HBox.margin>
+            <Insets left="10.0"/>
+         </HBox.margin>
+      </ComboBox>
+   </HBox>
+   <AnchorPane fx:id="apStrategyArea" prefWidth="200.0" VBox.vgrow="NEVER"/>
+   <HBox alignment="CENTER_RIGHT" prefWidth="200.0">
+      <Button mnemonicParsing="false" onAction="#onFindFiles" text="Search"/>
+   </HBox>
+   <HBox prefWidth="200.0">
+      <Label fx:id="lblResultsize" text="0 Results">
+         <HBox.margin>
+            <Insets left="10.0" right="10.0"/>
+         </HBox.margin>
       </Label>
-      <HBox prefWidth="200.0">
-         <children>
-            <Label text="Strategy" />
-            <ComboBox fx:id="cboStrategy" prefWidth="150.0">
-               <HBox.margin>
-                  <Insets left="10.0" />
-               </HBox.margin>
-            </ComboBox>
-         </children>
-      </HBox>
-      <AnchorPane fx:id="apStrategyArea" prefWidth="200.0" VBox.vgrow="NEVER" />
-      <HBox alignment="CENTER_RIGHT" prefWidth="200.0">
-         <children>
-            <Button mnemonicParsing="false" onAction="#onFindFiles" text="Search" />
-         </children>
-      </HBox>
-      <HBox prefWidth="200.0">
-         <children>
-            <Label fx:id="lblResultsize" text="0 Results">
-               <HBox.margin>
-                  <Insets left="10.0" right="10.0" />
-               </HBox.margin>
-            </Label>
-            <Button mnemonicParsing="false" onAction="#onShowSelectionInTreeMap" text="Show In TreeMap" />
-         </children>
-      </HBox>
-      <ListView fx:id="lstFoundFiles" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
-   </children>
+      <Button mnemonicParsing="false" onAction="#onShowSelectionInTreeMap" text="Show In TreeMap"/>
+   </HBox>
+   <ListView fx:id="lstFoundFiles" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS"/>
 </fx:root>

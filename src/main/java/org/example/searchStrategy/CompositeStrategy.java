@@ -14,7 +14,6 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 public abstract class CompositeStrategy extends StrategyBase {
 
@@ -89,7 +88,7 @@ public abstract class CompositeStrategy extends StrategyBase {
     }
 
 
-    public static BiConsumer<StrategyBase,ObjectProperty<StrategyBase>> handler = (nv,prop) -> {
+    public static final BiConsumer<StrategyBase,ObjectProperty<StrategyBase>> handler = (nv, prop) -> {
         if(nv instanceof CompositeStrategy cs) {
             StrategyBase old = prop.get();
             if(old != null) {
@@ -126,9 +125,6 @@ public abstract class CompositeStrategy extends StrategyBase {
 
     public ObjectProperty<StrategyBase> strategyAProperty() { return a; }
     public ObjectProperty<StrategyBase> strategyBProperty() { return b; }
-
-    public StrategyBase getA() { return a.get(); }
-    public StrategyBase getB() { return b.get(); }
 
 
 }
