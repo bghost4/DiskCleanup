@@ -8,22 +8,24 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.layout.HBox;
 import org.example.StatItem;
 
-import java.util.List;
 import java.util.function.Predicate;
 
 public class FileExtStrategy extends StrategyBase {
 
-    ComboBox<String> cboFileExt = new ComboBox<>();
-    HBox hb = new HBox();
+    final ComboBox<String> cboFileExt = new ComboBox<>();
+    final HBox hb = new HBox();
+
+    private final DataSupplier dataSupplier;
 
     @Override
     public Node getSettings() {
         return hb;
     }
 
-    public FileExtStrategy(ObservableList<String> ext) {
+    public FileExtStrategy(DataSupplier ds) {
+        this.dataSupplier = ds;
         hb.getChildren().addAll(new Label("File Extension"),cboFileExt);
-        setExtensions(ext);
+        cboFileExt.setItems(ds.fileExtensions());
     }
 
     @Override
@@ -36,7 +38,6 @@ public class FileExtStrategy extends StrategyBase {
         return "File Extension";
     }
 
-    public List<String> getExtensions() { return cboFileExt.getItems(); }
     public void setExtensions(ObservableList<String> extensions) { cboFileExt.setItems(extensions); }
     public String getSelectedExtension() { return cboFileExt.getValue(); }
     public void setSelectedExtension(String extension) { cboFileExt.setValue(extension); }

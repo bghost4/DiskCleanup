@@ -1,95 +1,67 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.ComboBox?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.Menu?>
-<?import javafx.scene.control.MenuBar?>
-<?import javafx.scene.control.MenuItem?>
-<?import javafx.scene.control.ProgressBar?>
-<?import javafx.scene.control.SplitPane?>
-<?import javafx.scene.control.TableColumn?>
-<?import javafx.scene.control.TableView?>
-<?import javafx.scene.control.TreeTableColumn?>
-<?import javafx.scene.control.TreeTableView?>
-<?import javafx.scene.layout.AnchorPane?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
 <?import org.controlsfx.control.BreadCrumbBar?>
-<?import javafx.scene.control.CheckMenuItem?>
-
-
-<?import javafx.scene.control.CheckBox?>
-<fx:root maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" prefHeight="800.0" prefWidth="600.0" type="VBox" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1">
-   <children>
-      <MenuBar>
-        <menus>
-          <Menu mnemonicParsing="false" text="File">
-            <items>
-                  <MenuItem mnemonicParsing="false" onAction="#onScanFolder" text="Scan Folder" />
-            </items>
-          </Menu>
-          <Menu mnemonicParsing="false" text="Tools">
-            <items>
-              <MenuItem mnemonicParsing="false" onAction="#onFindFiles" text="Find Files" />
-              <MenuItem mnemonicParsing="false" onAction="#onFindDuplicates" text="Find Duplicates" />
-              <MenuItem mnemonicParsing="false" onAction="#onGraphTypeUsage" text="Graph File Type Usage" />
-              <CheckMenuItem mnemonicParsing="false" fx:id="miTreeMapEnabled" text="Tree Map Enabled (Memory Usage)"/>
-            </items>
-          </Menu>
-          <Menu mnemonicParsing="false" text="Help">
-            <items>
-              <MenuItem mnemonicParsing="false" text="About" />
-            </items>
-          </Menu>
-        </menus>
-      </MenuBar>
-      <SplitPane dividerPositions="0.5" orientation="VERTICAL" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
-         <items>
-            <SplitPane dividerPositions="0.5" prefHeight="200.0" prefWidth="200.0">
-               <items>
-                  <TreeTableView fx:id="ttFileView" maxHeight="1.7976931348623157E308" prefHeight="200.0" prefWidth="200.0">
+<fx:root maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity"
+         prefHeight="800.0" prefWidth="600.0" type="VBox" xmlns="http://javafx.com/javafx/19"
+         xmlns:fx="http://javafx.com/fxml/1">
+    <MenuBar>
+        <Menu mnemonicParsing="false" text="File">
+            <MenuItem mnemonicParsing="false" onAction="#onScanFolder" text="Scan Folder"/>
+        </Menu>
+        <Menu mnemonicParsing="false" text="Tools">
+            <MenuItem mnemonicParsing="false" onAction="#onFindFiles" text="Find Files"/>
+            <MenuItem mnemonicParsing="false" onAction="#onFindDuplicates" text="Find Duplicates"/>
+            <MenuItem mnemonicParsing="false" onAction="#onGraphTypeUsage" text="Graph File Type Usage"/>
+            <CheckMenuItem mnemonicParsing="false" fx:id="miTreeMapEnabled" text="Tree Map Enabled (Memory Usage)"/>
+        </Menu>
+        <Menu mnemonicParsing="false" text="Help">
+            <MenuItem mnemonicParsing="false" text="About"/>
+        </Menu>
+    </MenuBar>
+    <SplitPane dividerPositions="0.5" orientation="VERTICAL" prefHeight="200.0" prefWidth="200.0"
+               VBox.vgrow="ALWAYS">
+        <SplitPane dividerPositions="0.5" prefHeight="200.0" prefWidth="200.0">
+            <TreeTableView fx:id="ttFileView" maxHeight="1.7976931348623157E308" prefHeight="200.0"
+                           prefWidth="200.0">
+                <columns>
+                    <TreeTableColumn fx:id="ttcName" prefWidth="75.0" text="Name"/>
+                    <TreeTableColumn fx:id="ttcSize" prefWidth="75.0" text="Size"/>
+                </columns>
+            </TreeTableView>
+            <VBox prefHeight="200.0" prefWidth="100.0">
+                <HBox prefWidth="200.0">
+                    <Label text="Legend Type">
+                        <HBox.margin>
+                            <Insets right="10.0"/>
+                        </HBox.margin>
+                    </Label>
+                    <ComboBox fx:id="cboLegendSelect" maxWidth="1.7976931348623157E308" prefWidth="150.0"
+                              HBox.hgrow="ALWAYS"/>
+                </HBox>
+                <TableView fx:id="tblStats" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308"
+                           prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
                     <columns>
-                      <TreeTableColumn fx:id="ttcName" prefWidth="75.0" text="Name" />
-                      <TreeTableColumn fx:id="ttcSize" prefWidth="75.0" text="Size" />
+                        <TableColumn fx:id="tcExt" prefWidth="75.0" text="Ext"/>
+                        <TableColumn fx:id="tcSize" prefWidth="75.0" text="Size"/>
+                        <TableColumn fx:id="tcCount" prefWidth="75.0" text="Count"/>
                     </columns>
-                  </TreeTableView>
-                  <VBox prefHeight="200.0" prefWidth="100.0">
-                     <children>
-                        <HBox prefWidth="200.0">
-                           <children>
-                              <Label text="Legend Type">
-                                 <HBox.margin>
-                                    <Insets right="10.0" />
-                                 </HBox.margin>
-                              </Label>
-                              <ComboBox fx:id="cboLegendSelect" maxWidth="1.7976931348623157E308" prefWidth="150.0" HBox.hgrow="ALWAYS" />
-                           </children>
-                        </HBox>
-                        <TableView fx:id="tblStats" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
-                          <columns>
-                            <TableColumn fx:id="tcExt" prefWidth="75.0" text="Ext" />
-                            <TableColumn fx:id="tcSize" prefWidth="75.0" text="Size" />
-                              <TableColumn fx:id="tcCount" prefWidth="75.0" text="Count" />
-                          </columns>
-                        </TableView>
-                     </children>
-                  </VBox>
-               </items>
-            </SplitPane>
-            <VBox>
-                <children>
-                    <BreadCrumbBar fx:id="breadCrumbBar" prefHeight="30.0" minHeight="30.0"/>
-                    <AnchorPane fx:id="pUsageView" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS"/>
-                </children>
+                </TableView>
             </VBox>
-         </items>
-      </SplitPane>
-       <HBox prefWidth="200.0" VBox.vgrow="NEVER">
-           <Label fx:id="lStatus" alignment="CENTER_LEFT" maxWidth="Infinity" text="Idle" HBox.hgrow="ALWAYS"/>
-           <Label fx:id="lMemStatus" alignment="CENTER_RIGHT" maxWidth="1.7976931348623157E308" text="Memory Usage"
-                  HBox.hgrow="SOMETIMES"/>
-           <ProgressBar fx:id="pbMemUsage" prefWidth="200.0" progress="0.0"/>
-       </HBox>
-   </children>
+        </SplitPane>
+        <VBox>
+            <BreadCrumbBar fx:id="breadCrumbBar" prefHeight="30.0" minHeight="30.0"/>
+            <AnchorPane fx:id="pUsageView" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308"
+                        prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS"/>
+        </VBox>
+    </SplitPane>
+    <HBox prefWidth="200.0" VBox.vgrow="NEVER">
+        <Label fx:id="lStatus" maxWidth="Infinity" text="Idle" HBox.hgrow="ALWAYS"/>
+        <Label fx:id="lMemStatus" alignment="CENTER_RIGHT" maxWidth="1.7976931348623157E308" text="Memory Usage"
+               HBox.hgrow="SOMETIMES"/>
+        <ProgressBar fx:id="pbMemUsage" prefWidth="200.0" progress="0.0"/>
+    </HBox>
 </fx:root>

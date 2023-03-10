@@ -5,8 +5,8 @@ import javafx.beans.property.StringProperty;
 
 public class ExactNameAndSize extends CompositeAndStrategy {
 
-    FileNameStrategy fns = new FileNameStrategy();
-    FileSizeStrategy fss = new FileSizeStrategy();
+    final FileNameStrategy fns = new FileNameStrategy();
+    final FileSizeStrategy fss = new FileSizeStrategy();
 
     public StringProperty fileNameProperty() { return fns.fileNamePatternProperty(); }
     public ObjectProperty<Long> fileSizeProperty() { return fss.fileSizeProperty(); }

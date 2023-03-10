@@ -1,6 +1,5 @@
 package org.example;
 
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.util.StringConverter;
 
 import java.time.*;

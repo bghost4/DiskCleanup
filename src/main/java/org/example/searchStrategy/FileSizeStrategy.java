@@ -15,14 +15,13 @@ import java.util.function.Predicate;
 public class FileSizeStrategy extends StrategyBase {
 
     private final LongSpinnerValueFactory svf = new LongSpinnerValueFactory();
-    private final Spinner<Long> spnFileSize = new Spinner<>(svf);
 
     public ObjectProperty<Long> fileSizeProperty() { return svf.valueProperty(); }
 
-    ComboBox<Comparison> cboOperator = new ComboBox<>();
+    final ComboBox<Comparison> cboOperator = new ComboBox<>();
     public ObjectProperty<Comparison> operatorProperty() { return cboOperator.valueProperty(); }
 
-    HBox settings = new HBox();
+    final HBox settings = new HBox();
 
     @Override
     public Node getSettings() {
@@ -33,7 +32,8 @@ public class FileSizeStrategy extends StrategyBase {
         super();
 
         cboOperator.getItems().setAll((Comparison.values()));
-        settings.getChildren().addAll(new Label("File Size: "),cboOperator,spnFileSize);
+        Spinner<Long> spnFileSize = new Spinner<>(svf);
+        settings.getChildren().addAll(new Label("File Size: "),cboOperator, spnFileSize);
         spnFileSize.setEditable(true);
     }
 

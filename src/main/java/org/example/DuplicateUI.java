@@ -41,7 +41,7 @@ public class DuplicateUI extends VBox {
 
     @FXML
     private Spinner<Long> spnMajorSize;
-    private LongSpinnerValueFactory lsvf = new LongSpinnerValueFactory();
+    private final LongSpinnerValueFactory lsvf = new LongSpinnerValueFactory();
 
     @FXML
     private ComboBox<FileSizeSuffix> cboUnit;
@@ -51,11 +51,11 @@ public class DuplicateUI extends VBox {
 
     private long minFileSize = 1000;
 
-    private final Service<Void> duplicateService = new Service<Void>() {
+    private final Service<Void> duplicateService = new Service<>() {
 
         @Override
         protected Task<Void> createTask() {
-            return new Task<Void>() {
+            return new Task<>() {
 
                 @Override
                 protected Void call() throws Exception {
@@ -64,43 +64,42 @@ public class DuplicateUI extends VBox {
                             .filter(ti -> (ti.getValue().pathType() == PathType.FILE && ti.getValue().length() > minFileSize))
                             .collect(Collectors.groupingBy(ti -> ti.getValue().length()))
                             .entrySet().stream().filter(es -> es.getValue().size() > 1)
-                            .flatMap(es -> es.getValue().stream())
-                            .collect(Collectors.toList());
+                            .flatMap(es -> es.getValue().stream()).toList();
                     //size of list is work total, index is work done when this gets turned into a Task
 
                     MessageDigest digest = MessageDigest.getInstance("SHA-256");
                     byte[] buffer = new byte[4096]; // Maybe make this settable?
-                    HashMap<String,List<TreeItem<StatItem>>> tree = new HashMap<>();
+                    HashMap<String, List<TreeItem<StatItem>>> tree = new HashMap<>();
 
-                    for(int i=0; i < firstSort.size(); i++) {
-                        updateProgress(i,firstSort.size());
+                    for (int i = 0; i < firstSort.size(); i++) {
+                        updateProgress(i, firstSort.size());
                         Path p = TreeItemUtils.buildPath(firstSort.get(i));
-                        updateMessage("Hashing "+p);
+                        updateMessage("Hashing " + p);
                         digest.reset();
 
-                        try(InputStream is = Files.newInputStream(p)) {
-                            int b = 0;
-                            while( (b = is.read(buffer)) != -1 ) {
-                                digest.update(buffer,0,b);
+                        try (InputStream is = Files.newInputStream(p)) {
+                            int b;
+                            while ((b = is.read(buffer)) != -1) {
+                                digest.update(buffer, 0, b);
                             }
                             String hash = bytesToHex(digest.digest());
-                            tree.computeIfAbsent(hash,(h) -> new ArrayList<>()).add(firstSort.get(i));
+                            tree.computeIfAbsent(hash, (h) -> new ArrayList<>()).add(firstSort.get(i));
                             //System.out.println("Adding Hash: "+hash+" Tree.size() "+tree.size());
-                        } catch(IOException e) {
+                        } catch (IOException e) {
                             e.printStackTrace();
                         }
                     }
 
                     updateMessage("Sorting Out Duplicates");
-                    TreeItem<DTI> root = new TreeItem<DTI>(new DTI("Results"));
+                    TreeItem<DTI> root = new TreeItem<>(new DTI("Results"));
 
-                    List<String> keys = tree.keySet().stream().map(k -> new Pair<String,Long>(k,tree.get(k).stream().mapToLong(ti -> ti.getValue().length()).sum())).sorted(Comparator.comparingLong((Pair<String,Long> p) -> p.b()).reversed()).map(p -> p.a()).collect(Collectors.toList());
+                    List<String> keys = tree.keySet().stream().map(k -> new Pair<>(k, tree.get(k).stream().mapToLong(ti -> ti.getValue().length()).sum())).sorted(Comparator.comparingLong((Pair<String, Long> p) -> p.b()).reversed()).map(Pair::a).toList();
 
-                    for(int i=0; i < keys.size(); i++) {
+                    for (int i = 0; i < keys.size(); i++) {
                         String key = keys.get(i);
                         List<TreeItem<StatItem>> values = tree.get(key);
-                        if( values.size() > 1) {
-                            TreeItem<DTI> child = new TreeItem<DTI>(new DTI(key));
+                        if (values.size() > 1) {
+                            TreeItem<DTI> child = new TreeItem<>(new DTI(key));
                             for (int j = 0; j < values.size(); j++) {
                                 TreeItem<DTI> fileItem = new TreeItem<>(new DTI(values.get(j)));
                                 child.getChildren().add(fileItem);
@@ -109,7 +108,7 @@ public class DuplicateUI extends VBox {
                         }
                     }
 
-                    updateMessage(String.format("Complete (%d/%d)",keys.size(),firstSort.size()));
+                    updateMessage(String.format("Complete (%d/%d)", keys.size(), firstSort.size()));
                     Platform.runLater(() -> tvDuplicates.setRoot(root));
 
                     return null;

@@ -143,12 +143,12 @@ public class MainWindow extends VBox implements DataSupplier {
             case "And" -> Optional.of(new CompositeAndStrategy(this));
             case "Or" -> Optional.of(new CompositeOrStrategy(this));
             case "File Name and Size" -> Optional.of(new ExactNameAndSize(this));
-            case "File Extension" -> Optional.of(new FileExtStrategy(fileExtensions()));
+            case "File Extension" -> Optional.of(new FileExtStrategy(this));
             case "File Name" -> Optional.of(new FileNameStrategy());
             case "File Owner" -> Optional.of(new FileOwnerStrategy(this));
             case "File Size" -> Optional.of(new FileSizeStrategy());
             case "File Time" -> Optional.of(new FileTimeStrategy());
-            case "File Type" -> Optional.of(new FileTypeStrategy(fileTypes()));
+            case "File Type" -> Optional.of(new FileTypeStrategy(this));
             default -> Optional.empty();
         };
     }
@@ -347,9 +347,9 @@ public class MainWindow extends VBox implements DataSupplier {
         createTreeContextMenu();
         javafx.scene.image.Image iFile,iFolder,iLink;
 
-        iFile = new javafx.scene.image.Image(getClass().getResourceAsStream("/file.png"));
-        iFolder = new javafx.scene.image.Image(getClass().getResourceAsStream("/folder.png"));
-        iLink = new javafx.scene.image.Image(getClass().getResourceAsStream("/link.png"));
+        iFile = new javafx.scene.image.Image(Objects.requireNonNull(getClass().getResourceAsStream("/file.png")));
+        iFolder = new javafx.scene.image.Image(Objects.requireNonNull(getClass().getResourceAsStream("/folder.png")));
+        iLink = new javafx.scene.image.Image(Objects.requireNonNull(getClass().getResourceAsStream("/link.png")));
 
         ttcName.setMaxWidth(1f * Integer.MAX_VALUE * 80);
         ttcSize.setMaxWidth(1f * Integer.MAX_VALUE * 20);
@@ -531,14 +531,12 @@ public class MainWindow extends VBox implements DataSupplier {
                 StrategyBase strategy;
 
                 if(cboLegendSelect.getValue().equals("File Type")) {
-                    FileTypeStrategy fts  = new FileTypeStrategy(fileTypes);
-                    fts.setTypes(fileTypes);
+                    FileTypeStrategy fts  = new FileTypeStrategy(this);
                     fts.setSelectedType(tblStats.getSelectionModel().getSelectedItem().fileClass());
                     strategy = fts;
                 } else {
-                    FileExtStrategy fns = new FileExtStrategy(fileExts);
-                    fns.setExtensions(fileExts);
-                    fns.setSelectedExtension(tblStats.getSelectionModel().getSelectedItem().fileClass());
+                    FileExtStrategy fns = new FileExtStrategy(this);
+                    fns.setSelectedExtension(tblStats.getSelectionModel().getSelectedItem().fileClass);
                     strategy = fns;
                 }
 

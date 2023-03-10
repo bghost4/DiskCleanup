@@ -2,6 +2,8 @@ package org.example;
 
 import javafx.scene.control.TreeItem;
 
+import java.util.Objects;
+
 public class DTI {
     private final String hash;
     private final boolean iitem;
@@ -24,13 +26,9 @@ public class DTI {
     }
 
     public String toString() {
-        if(hash == null) {
-            //Tree Item
-            return TreeItemUtils.buildPath(item).toString();
-        } else {
-            //Hexdump
-            return hash;
-        }
+        //Tree Item
+        //Hexdump
+        return Objects.requireNonNullElseGet(hash, () -> TreeItemUtils.buildPath(item).toString());
     }
 
     public TreeItem<StatItem> getItem() {

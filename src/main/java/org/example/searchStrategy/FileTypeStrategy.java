@@ -12,13 +12,16 @@ import java.util.List;
 import java.util.function.Predicate;
 
 public class FileTypeStrategy extends StrategyBase {
-    ComboBox<String> cboFileTypes = new ComboBox<>();
-    HBox hb = new HBox();
+    final ComboBox<String> cboFileTypes = new ComboBox<>();
+    final HBox hb = new HBox();
 
-    public FileTypeStrategy(ObservableList<String> types) {
+    private final DataSupplier dataSupplier;
+
+    public FileTypeStrategy(DataSupplier ds) {
         super();
+        this.dataSupplier = ds;
         hb.getChildren().addAll(new Label("File Type"),cboFileTypes);
-        cboFileTypes.setItems(types);
+        cboFileTypes.setItems(ds.fileTypes());
     }
 
     @Override
