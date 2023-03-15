@@ -9,6 +9,8 @@ plugins {
 group 'org.example'
 version '1.0'
 
+java.modularity.inferModulePath = true
+
 javafx {
     version = "19"
     modules = ['javafx.controls', 'javafx.fxml']
@@ -62,10 +64,6 @@ dependencies {
     implementation group: 'org.controlsfx', name: 'controlsfx', version: '11.1.2'
 
     implementation group: 'org.slf4j', name: 'slf4j-simple', version: '2.0.6'
-
-    // https://mvnrepository.com/artifact/net.sf.sevenzipjbinding/sevenzipjbinding
-    implementation group: 'net.sf.sevenzipjbinding', name: 'sevenzipjbinding', version: '16.02-2.01'
-
 }
 
 test {

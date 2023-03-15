@@ -180,7 +180,16 @@ public class TreeMap extends StackPane {
         rectangleUpdater.setLookupFunction(ti -> Optional.ofNullable(pathToRect.get(ti)) );
         rectangleCreator.setOnSucceeded(eh -> treeMapPacker.restart());
 
-        shader.addListener((ob,ov,nv) -> getChildren().set(1, Objects.requireNonNullElseGet(nv, Group::new)));
+        shader.addListener((ob,ov,nv) -> {
+            if(nv != null) {
+                getChildren().set(1, Objects.requireNonNullElseGet(nv, Group::new));
+            } else {
+                System.out.println("setting old shader to Invisible");
+                ov.setVisible(false);
+            }
+
+
+        });
 
         rectangleUpdater.colorPickerProperty().bind(typePainter);
 
@@ -210,10 +219,10 @@ public class TreeMap extends StackPane {
         selection.addListener( (ob,ov,nv) ->
         {
             if(!enabled.get()) { return; }
-            if(nv != null) {
-               shadeMaker.restart();
+            if(nv == null) {
+                getChildren().set(1,new Group());
             } else {
-                pUsage.getChildren().remove(shader.get());
+                shadeMaker.restart();
             }
         });
 
@@ -276,7 +285,6 @@ public class TreeMap extends StackPane {
     public void clearSelection() {
         if(!enabled.get()) { return; }
         selection.set(null);
-        shader.set(null);
     }
 
     public Function<TreeItem<StatItem>, Paint> getTypePainter() {

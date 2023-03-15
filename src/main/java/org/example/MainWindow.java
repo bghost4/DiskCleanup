@@ -28,8 +28,6 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Duration;
-import net.sf.sevenzipjbinding.*;
-import net.sf.sevenzipjbinding.impl.RandomAccessFileOutStream;
 import org.apache.tika.Tika;
 import org.controlsfx.control.BreadCrumbBar;
 import org.example.searchStrategy.*;
@@ -51,6 +49,8 @@ import java.util.concurrent.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 public class MainWindow extends VBox implements DataSupplier {
 
@@ -456,6 +456,7 @@ public class MainWindow extends VBox implements DataSupplier {
             if(nv != null) {
                 breadCrumbBar.setSelectedCrumb(nv);
                 if(nv == ttFileView.getRoot()) {
+                    System.out.println("Selection Cleared, Revealing Whole Treemap");
                     treeMap.clearSelection();
                 } else if(nv.isLeaf()) {
                     treeMap.setSelection(() -> Stream.of(nv));
@@ -581,6 +582,13 @@ public class MainWindow extends VBox implements DataSupplier {
             miHideFile.setOnAction(eh -> hide(ttFileView.getSelectionModel().getSelectedItem()));
         MenuItem miDelete = new MenuItem("Delete");
             miDelete.setOnAction(eh -> delete(ttFileView.getSelectionModel().getSelectedItem()) );
+
+        MenuItem miCompress = new MenuItem("Compress");
+            miCompress.setOnAction( eh -> compress(ttFileView.getSelectionModel().getSelectedItem()));
+
+        MenuItem miRescan = new MenuItem("Rescan");
+            miRescan.setOnAction( eh -> rescan(ttFileView.getSelectionModel().getSelectedItem()));
+
         MenuItem miZoomInto = new MenuItem("Zoom Into");
             miZoomInto.setOnAction(eh -> zoomIn(ttFileView.getSelectionModel().getSelectedItem()));
         MenuItem miZoomOut = new MenuItem("Zoom Out");
@@ -591,7 +599,7 @@ public class MainWindow extends VBox implements DataSupplier {
             miFindDuplicates.setOnAction(eh -> findDuplicates(ttFileView.getSelectionModel().getSelectedItem()));
         MenuItem miRebuildTree = new MenuItem("Rebuild Tree");
             miRebuildTree.setOnAction(eh -> treeMap.refresh() );
-        ctx.getItems().addAll(miSystemOpen,miOpenFolder,miHideFile,miDelete,miRebuildTree,miZoomInto,miZoomOut,miZoomRoot,miFindDuplicates);
+        ctx.getItems().addAll(miSystemOpen,miOpenFolder,miHideFile,miDelete,miCompress,miRebuildTree,miRescan,miZoomInto,miZoomOut,miZoomRoot,miFindDuplicates);
 
         ttFileView.setContextMenu(ctx);
     }
@@ -643,29 +651,56 @@ public class MainWindow extends VBox implements DataSupplier {
     }
 
     private void compress(TreeItem<StatItem> selection) {
-
             Path archivePath;
             Path archiveParent = TreeItemUtils.buildPath(selection.getParent());
             if(selection.getValue().pathType() == PathType.FILE) {
                 String ext = TreeItemUtils.getExtension(selection);
                 String baseName = selection.getValue().p().getFileName().toString().replace(ext,"");
-                archivePath = archiveParent.resolve(Paths.get(baseName+".7z"));
+                archivePath = archiveParent.resolve(Paths.get(baseName+".zip"));
             } else if(selection.getValue().pathType() == PathType.DIRECTORY) {
-                archivePath = archiveParent.resolve(Paths.get(selection.getValue().p().getFileName().toString()+".7z"));
+                archivePath = archiveParent.resolve(Paths.get(selection.getValue().p().getFileName().toString()+".zip"));
             } else {
                 return;
             }
 
-            try(RandomAccessFile raf = new RandomAccessFile(archivePath.toFile(),"rw")) {
-                IOutCreateArchive7z outArchive = SevenZip.openOutArchive7z();
-                outArchive.setLevel(5);
-                outArchive.setSolid(true);
-                outArchive.createArchive(new RandomAccessFileOutStream(raf),42,);
-            }catch(IOException e) {
+            StatItem item = selection.getValue();
+            StatItem replacement = new StatItem(item.p(),item.pathType(),true,item.length(),item.type(),item.ext(),item.createTime(),item.modTime(),item.owner());
+            selection.setValue(replacement); //Makes the spinny thing again then it will disappear when done
 
-            }
+            Task<Void> compressionTask = new Task<>() {
+                @Override
+                protected Void call() throws IOException {
+                    ZipOutputStream zos = new ZipOutputStream(Files.newOutputStream(archivePath));
+                        List<TreeItem<StatItem>> stuff = TreeItemUtils.flatMapTreeItem(selection).filter(ti -> ti.getValue().pathType()==PathType.FILE).toList();
+                        for(TreeItem<StatItem> ti : stuff) {
+                            Path absPath = TreeItemUtils.buildPath(ti);
+                            Path relPath = archiveParent.relativize(absPath);
+                            ZipEntry entry = new ZipEntry(relPath.toString());
+                            zos.putNextEntry(entry);
+                            Files.newInputStream(absPath).transferTo(zos);
+                            zos.closeEntry();
+                        }
+                    return null;
+                }
+            };
 
+            compressionTask.setOnSucceeded(wse -> {
+                delete(selection);
+            });
 
+            exec.execute(compressionTask);
+
+    }
+
+    private void rescan(TreeItem<StatItem> item) {
+        item.getChildren().clear();
+        FileScannerTask fileScannerTask = new FileScannerTask(item,p -> tika.detect(TreeItemUtils.buildPath(item).toString()));
+        fileScannerTask.setOnSucceeded(eh -> {
+            System.out.println("Rescan Done");
+            ttFileView.fireEvent(new TreeItem.TreeModificationEvent<StatItem>(TreeItem.TreeModificationEvent.ANY,item));
+            treeMap.rebuild();
+        } );
+        exec.execute(fileScannerTask);
     }
 
     private void zoomIn(TreeItem<StatItem> item) {
