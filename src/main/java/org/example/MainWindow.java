@@ -28,6 +28,8 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Duration;
+import net.sf.sevenzipjbinding.*;
+import net.sf.sevenzipjbinding.impl.RandomAccessFileOutStream;
 import org.apache.tika.Tika;
 import org.controlsfx.control.BreadCrumbBar;
 import org.example.searchStrategy.*;
@@ -35,8 +37,10 @@ import org.example.searchStrategy.*;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileOwnerAttributeView;
 import java.nio.file.attribute.UserPrincipal;
@@ -639,6 +643,28 @@ public class MainWindow extends VBox implements DataSupplier {
     }
 
     private void compress(TreeItem<StatItem> selection) {
+
+            Path archivePath;
+            Path archiveParent = TreeItemUtils.buildPath(selection.getParent());
+            if(selection.getValue().pathType() == PathType.FILE) {
+                String ext = TreeItemUtils.getExtension(selection);
+                String baseName = selection.getValue().p().getFileName().toString().replace(ext,"");
+                archivePath = archiveParent.resolve(Paths.get(baseName+".7z"));
+            } else if(selection.getValue().pathType() == PathType.DIRECTORY) {
+                archivePath = archiveParent.resolve(Paths.get(selection.getValue().p().getFileName().toString()+".7z"));
+            } else {
+                return;
+            }
+
+            try(RandomAccessFile raf = new RandomAccessFile(archivePath.toFile(),"rw")) {
+                IOutCreateArchive7z outArchive = SevenZip.openOutArchive7z();
+                outArchive.setLevel(5);
+                outArchive.setSolid(true);
+                outArchive.createArchive(new RandomAccessFileOutStream(raf),42,);
+            }catch(IOException e) {
+
+            }
+
 
     }
 
