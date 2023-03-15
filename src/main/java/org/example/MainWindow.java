@@ -26,6 +26,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import javafx.util.Duration;
 import org.apache.tika.Tika;
 import org.controlsfx.control.BreadCrumbBar;
@@ -400,6 +401,7 @@ public class MainWindow extends VBox implements DataSupplier {
         breadCrumbBar.selectedCrumbProperty().addListener((ob,ov,nv) -> {
             if(ttFileView.getSelectionModel().getSelectedItem() != nv) {
                 ttFileView.getSelectionModel().select(nv);
+                ttFileView.scrollTo(ttFileView.getRow(nv));
             }
         });
 
@@ -448,10 +450,10 @@ public class MainWindow extends VBox implements DataSupplier {
 
         ttFileView.getSelectionModel().selectedItemProperty().addListener((ob,ov,nv) -> {
             if(nv != null) {
-                //updateRects((ti -> isChildOf(nv,ti)), (t, r) -> r.setOpacity(1), (t, r) -> r.setOpacity(notSelectedOpacity));
-                TreeItemUtils.recursiveExpand(nv);
                 breadCrumbBar.setSelectedCrumb(nv);
-                if(nv.isLeaf()) {
+                if(nv == ttFileView.getRoot()) {
+                    treeMap.clearSelection();
+                } else if(nv.isLeaf()) {
                     treeMap.setSelection(() -> Stream.of(nv));
                 } else {
                     treeMap.setSelection(() -> TreeItemUtils.flatMapTreeItem(nv));
@@ -573,6 +575,8 @@ public class MainWindow extends VBox implements DataSupplier {
 
         MenuItem miHideFile = new MenuItem("Hide");
             miHideFile.setOnAction(eh -> hide(ttFileView.getSelectionModel().getSelectedItem()));
+        MenuItem miDelete = new MenuItem("Delete");
+            miDelete.setOnAction(eh -> delete(ttFileView.getSelectionModel().getSelectedItem()) );
         MenuItem miZoomInto = new MenuItem("Zoom Into");
             miZoomInto.setOnAction(eh -> zoomIn(ttFileView.getSelectionModel().getSelectedItem()));
         MenuItem miZoomOut = new MenuItem("Zoom Out");
@@ -583,12 +587,44 @@ public class MainWindow extends VBox implements DataSupplier {
             miFindDuplicates.setOnAction(eh -> findDuplicates(ttFileView.getSelectionModel().getSelectedItem()));
         MenuItem miRebuildTree = new MenuItem("Rebuild Tree");
             miRebuildTree.setOnAction(eh -> treeMap.refresh() );
-        ctx.getItems().addAll(miSystemOpen,miOpenFolder,miHideFile,miRebuildTree,miZoomInto,miZoomOut,miZoomRoot,miFindDuplicates);
+        ctx.getItems().addAll(miSystemOpen,miOpenFolder,miHideFile,miDelete,miRebuildTree,miZoomInto,miZoomOut,miZoomRoot,miFindDuplicates);
 
         ttFileView.setContextMenu(ctx);
     }
 
+    private void delete(TreeItem<StatItem> item) {
+        try {
+            if (item != null) {
+                //For testing purposes confirm delete
+                Alert a = new Alert(Alert.AlertType.CONFIRMATION,"Really Delete "+item.getValue().p());
+                a.initStyle(StageStyle.UTILITY);
+                a.setHeaderText(null);
+                a.getButtonTypes().setAll(ButtonType.YES,ButtonType.CANCEL);
+                Optional<ButtonType> bchoice = a.showAndWait();
+                if(bchoice.orElse(ButtonType.CANCEL).equals(ButtonType.YES)) {
+                    if(item.getValue().pathType() == PathType.DIRECTORY) {
+                        Files.walk(TreeItemUtils.buildPath(item))
+                                .sorted(Comparator.reverseOrder())
+                                .map(Path::toFile)
+                                .forEach(File::delete);
+                    } else  {
+                        Files.delete(TreeItemUtils.buildPath(item));
+                    }
+                    TreeItem<StatItem> parent = item.getParent();
+                    parent.getChildren().remove(item);
+                    treeMap.refresh();
+                }
+            }
+        } catch (IOException e) {
+            Alert a = new Alert(Alert.AlertType.ERROR,"Error During Delete");
+            a.setContentText(e.toString());
+            a.showAndWait();
+        }
+    }
 
+    private Path getSelectionPath() {
+        return TreeItemUtils.buildPath(ttFileView.getSelectionModel().getSelectedItem());
+    }
 
     private void findDuplicates(TreeItem<StatItem> selectedItem) {
         Stage stage = new Stage();
@@ -600,6 +636,10 @@ public class MainWindow extends VBox implements DataSupplier {
         Scene s = new Scene(dupui);
         stage.setScene(s);
         stage.show();
+    }
+
+    private void compress(TreeItem<StatItem> selection) {
+
     }
 
     private void zoomIn(TreeItem<StatItem> item) {
