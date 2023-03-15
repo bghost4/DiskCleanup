@@ -62,6 +62,23 @@ public class TreeMap extends StackPane {
         }
     };
 
+    public void deleteRectangles(TreeItem<StatItem> nodeDeleted) {
+        List<TreeItem<StatItem>> allItems = TreeItemUtils.flatMapTreeItem(nodeDeleted).toList();
+
+            allItems.forEach(item -> {
+                Rectangle r = pathToRect.get(item);
+
+                if(r != null) {
+
+                    pathToRect.remove(item);
+                    pUsage.getChildren().remove(r);
+                    rectToPath.remove(r);
+                    //Poof?
+                }
+
+            });
+
+    }
 
     private final Service<List<Pair<TreeItem<StatItem>,Bound>>> treeMapPacker = new Service<>() {
         final RectPacker<TreeItem<StatItem>> packer = new RectPacker<>(ti -> ti.getValue().length());

@@ -235,6 +235,7 @@ public class MainWindow extends VBox implements DataSupplier {
 
             //update parent size
             recalcChildrenRecursive(parent);
+            treeMap.deleteRectangles(item);
             treeMap.refresh();
         } else {
             //TODO display message about removing a root node
@@ -624,6 +625,7 @@ public class MainWindow extends VBox implements DataSupplier {
                     }
                     TreeItem<StatItem> parent = item.getParent();
                     parent.getChildren().remove(item);
+                    treeMap.deleteRectangles(item);
                     treeMap.refresh();
                 }
             }
