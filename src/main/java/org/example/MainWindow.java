@@ -699,7 +699,13 @@ public class MainWindow extends VBox implements DataSupplier {
         FileScannerTask fileScannerTask = new FileScannerTask(item,p -> tika.detect(TreeItemUtils.buildPath(item).toString()));
         fileScannerTask.setOnSucceeded(eh -> {
             System.out.println("Rescan Done");
-            ttFileView.fireEvent(new TreeItem.TreeModificationEvent<StatItem>(TreeItem.TreeModificationEvent.ANY,item));
+            try {
+                item.getChildren().setAll(fileScannerTask.get());
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                e.printStackTrace();
+            }
             treeMap.rebuild();
         } );
         exec.execute(fileScannerTask);
