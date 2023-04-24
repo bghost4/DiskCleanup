@@ -59,6 +59,7 @@
         </VBox>
     </SplitPane>
     <HBox prefWidth="200.0" VBox.vgrow="NEVER">
+        <Button fx:id="btnTasks" />
         <Label fx:id="lStatus" maxWidth="Infinity" text="Idle" HBox.hgrow="ALWAYS"/>
         <Label fx:id="lMemStatus" alignment="CENTER_RIGHT" maxWidth="1.7976931348623157E308" text="Memory Usage"
                HBox.hgrow="SOMETIMES"/>

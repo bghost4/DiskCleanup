@@ -20,6 +20,7 @@ public class ShadeGenerator extends Task<Path> {
         this.items = items;
         this.width = width;
         this.height = height;
+        updateTitle("Updating Shade Overlay");
     }
 
 

@@ -18,6 +18,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.*;
+import org.example.searchStrategy.DataSupplier;
 
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -39,6 +40,8 @@ public class TreeMap extends StackPane {
     public final SimpleBooleanProperty busy = new SimpleBooleanProperty();
 
 
+    private final DataSupplier ds;
+
     private final Pane pUsage = new Pane();
 
     private final RectangleUpdateService rectangleUpdater = new RectangleUpdateService();
@@ -58,6 +61,7 @@ public class TreeMap extends StackPane {
     private final Service<Path> shadeMaker = new Service<>() {
         @Override
         protected Task<Path> createTask() {
+
             return new ShadeGenerator(pathToRect::get, selection.get().get(), pUsage.getWidth(), pUsage.getHeight());
         }
     };
@@ -87,9 +91,11 @@ public class TreeMap extends StackPane {
         protected Task<List<Pair<TreeItem<StatItem>, Bound>>> createTask() {
 
             return new Task<List<Pair<TreeItem<StatItem>, Bound>>>() {
+
+
                 @Override
                 protected List<Pair<TreeItem<StatItem>, Bound>> call() {
-                    System.out.println("TreeMapPacker Started");
+                    updateTitle("Packing Tree Map");
                     Bound parent = new Bound(0, 0, pUsage.getWidth(), pUsage.getHeight());
                     return recurse(parent, context.get()).toList();
                 }
@@ -112,7 +118,7 @@ public class TreeMap extends StackPane {
             return new Task<>() {
                 @Override
                 protected Void call() {
-                    System.out.println("Rectangle Creator Started");
+                    updateTitle("Creating Rectangles");
                     List<Rectangle> items = TreeItemUtils.flatMapTreeItem(context.getValue())
                             .filter(TreeItemUtils::isRegularFile) //Files only
                             .map(ti -> {
@@ -156,8 +162,14 @@ public class TreeMap extends StackPane {
             }
     }
 
-    public TreeMap() {
+    public TreeMap(DataSupplier ds) {
         super();
+
+        this.ds = ds;
+        treeMapPacker.setExecutor(ds.getTaskManager());
+        rectangleUpdater.setExecutor(ds.getTaskManager());
+        rectangleCreator.setExecutor(ds.getTaskManager());
+
 
         //Keep progress indicator from getting mouse events
         ProgressIndicator spinnymajig = new ProgressIndicator();

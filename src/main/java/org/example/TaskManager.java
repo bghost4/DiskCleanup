@@ -1,5 +1,6 @@
 package org.example;
 
+import javafx.application.Platform;
 import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyIntegerProperty;
@@ -7,40 +8,20 @@ import javafx.beans.property.SimpleIntegerProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Service;
 import javafx.concurrent.Task;
-
-import java.util.HashMap;
 import java.util.Optional;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class TaskManager {
+public class TaskManager implements Executor {
     private final ObservableList<Task<?>> tlist = FXCollections.observableArrayList(task -> new Observable[]{task.runningProperty()});
-    private final HashMap<Task<?>,String> namedTasks = new HashMap<>();
 
     private final ExecutorService exec;
 
-    public void execute(Task<?> t, String name) {
-        tlist.add(t);
-        namedTasks.put(t,name);
-    }
-
-    public void execute(Task<?> t) {
-        execute(t,t.getClass().getName());
-    }
-
-    public void execute(Runnable r) {
-        execute(new Task<Void>() {
-            @Override
-            protected Void call() throws Exception {
-                r.run();
-                return null;
-            }
-        });
-    }
-
     public Optional<String> getName(Task<?> t) {
-        return Optional.ofNullable(namedTasks.get(t));
+        return Optional.ofNullable(t.getTitle());
     }
 
     public ObservableList<Task<?>> getTasks() { return tlist; }
@@ -83,4 +64,16 @@ public class TaskManager {
     public int getNumTasks() { return numTasks.get(); }
     public int getRunningTasks() { return runningTasks.get(); }
 
+    @Override
+    public void execute(Runnable command) {
+        if(command instanceof Task<?> T) {
+            Platform.runLater(() -> tlist.add(T));
+        } else if(command instanceof Service<?> service) {
+            RunnableTask rt = new RunnableTask(service.getTitle(), command);
+            Platform.runLater(() -> tlist.add(rt));
+        } else {
+            RunnableTask rt = new RunnableTask("Runnable "+command.getClass().getName(),command);
+            Platform.runLater(() -> tlist.add(rt));
+        }
+    }
 }

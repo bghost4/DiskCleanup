@@ -14,6 +14,7 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.*;
@@ -21,6 +22,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -90,6 +92,9 @@ public class MainWindow extends VBox implements DataSupplier {
 
     private final Random random = new Random();
 
+    @FXML
+    private Button btnTasks;
+
     private final ObservableList<String> fileTypes = FXCollections.observableArrayList();
     private final ObservableList<String> fileExts = FXCollections.observableArrayList();
     private final ObservableList<String> strategies = FXCollections.observableArrayList();
@@ -102,7 +107,7 @@ public class MainWindow extends VBox implements DataSupplier {
     @FXML
     private ProgressBar pbMemUsage;
 
-    final TreeMap treeMap = new TreeMap();
+    final TreeMap treeMap = new TreeMap(this);
 
     private final ScheduledService<Void> svcMemoryUsage = new ScheduledService<>() {
         @Override
@@ -110,6 +115,7 @@ public class MainWindow extends VBox implements DataSupplier {
             return new Task<>() {
                 @Override
                 protected Void call() {
+                    updateTitle("Memory Update");
                     double percent = 1 - ((double) Runtime.getRuntime().freeMemory() / (double) Runtime.getRuntime().totalMemory());
                     String text = String.format(
                             "%s Free of %s",
@@ -175,6 +181,11 @@ public class MainWindow extends VBox implements DataSupplier {
     @Override
     public TreeMap getTreeMap() {
         return treeMap;
+    }
+
+    @Override
+    public TaskManager getTaskManager() {
+        return tskmgr;
     }
 
     private record FileClassSizeCount(String fileClass, long size, long count) { }
@@ -320,20 +331,26 @@ public class MainWindow extends VBox implements DataSupplier {
                     generateFileTypeLegend();
                     treeMap.rebuild();
 
-                Runnable r = () -> {
-                    //The following need not happen on the Application Thread, and we should probably process them all at once instead of mulling through the tree 3 times
-                    fileExts.setAll(
-                            TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(TreeItemUtils::isRegularFile).map(item -> item.getValue().ext()).distinct().sorted().toList()
-                    );
+                Task<Void> r = new Task() {
+                    @Override
+                    protected Void call() throws Exception {
+                        //The following need not happen on the Application Thread, and we should probably process them all at once instead of mulling through the tree 3 times
+                        fileExts.setAll(
+                                TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(TreeItemUtils::isRegularFile).map(item -> item.getValue().ext()).distinct().sorted().toList()
+                        );
 
-                    fileTypes.setAll(
-                            TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(TreeItemUtils::isRegularFile).map(item -> item.getValue().type()).distinct().sorted().toList()
-                    );
+                        fileTypes.setAll(
+                                TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(TreeItemUtils::isRegularFile).map(item -> item.getValue().type()).distinct().sorted().toList()
+                        );
 
-                    fileOwners.setAll(
-                            TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(TreeItemUtils::isRegularFile).map(item -> item.getValue().owner()).distinct().sorted(Comparator.comparing(Principal::getName)).toList()
-                    );
+                        fileOwners.setAll(
+                                TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(TreeItemUtils::isRegularFile).map(item -> item.getValue().owner()).distinct().sorted(Comparator.comparing(Principal::getName)).toList()
+                        );
+
+                        return null;
+                    }
                 };
+
                 tskmgr.execute(r);
                 buildTreeRunning.set(false);
         });
@@ -439,7 +456,7 @@ public class MainWindow extends VBox implements DataSupplier {
                 if(!empty && item != null) {
                     setText(item);
                     Rectangle r = new Rectangle(16, 16);
-                    r.setFill(colorPicker.computeIfAbsent(item,n -> randomColor()));
+                    Platform.runLater(() -> r.setFill(colorPicker.computeIfAbsent(item,n -> randomColor())));
                     setGraphic(r);
                 } else {
                     setText(null); setGraphic(null);
@@ -518,6 +535,20 @@ public class MainWindow extends VBox implements DataSupplier {
                     }
                 },buildTreeRunning,treeMap.busy)
         );
+
+        btnTasks.textProperty().bind(Bindings.format("%d of %d",tskmgr.getRunningTasks(),tskmgr.numTasksProperty()));
+        btnTasks.setOnAction(eh -> {
+            Stage s = new Stage();
+            s.setTitle("Task View");
+            TaskListView tlv = new TaskListView();
+            tlv.setTaskManager(tskmgr);
+            VBox vb = new VBox();
+            VBox.setVgrow(tlv, Priority.ALWAYS);
+            vb.getChildren().add(tlv);
+            Scene sc = new Scene(vb);
+            s.setScene(sc);
+            s.show();
+        });
 
         miTreeMapEnabled.setSelected(true); //Eventually make this a setting
         treeMap.enabledProperty().bind(miTreeMapEnabled.selectedProperty());

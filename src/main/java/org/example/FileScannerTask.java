@@ -19,6 +19,7 @@ public class FileScannerTask extends Task<List<TreeItem<StatItem>>> {
     private final Function<Path,String> typeExtractor;
 
     public FileScannerTask(TreeItem<StatItem> start,Function<Path,String> typeExtractor){
+        updateTitle("File Scan: "+TreeItemUtils.buildPath(start).toString());
         this.typeExtractor = typeExtractor;
         this.parent = start;
     }
@@ -27,7 +28,7 @@ public class FileScannerTask extends Task<List<TreeItem<StatItem>>> {
     protected List<TreeItem<StatItem>> call(){
         try {
             Path path = TreeItemUtils.buildPath(parent);
-            //System.out.println("File Scanner Call: "+path);
+            updateTitle("Scanning: "+path.toFile());
 
             return Files.walk(path, 1)
                     .flatMap(c -> c.getFileName().equals(parent.getValue().p().getFileName()) ? Stream.empty() : Stream.of(buildTree(path,c)))

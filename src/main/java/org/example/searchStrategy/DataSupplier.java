@@ -3,6 +3,7 @@ package org.example.searchStrategy;
 import javafx.collections.ObservableList;
 import javafx.scene.control.TreeTableView;
 import org.example.StatItem;
+import org.example.TaskManager;
 import org.example.TreeMap;
 
 import java.nio.file.attribute.UserPrincipal;
@@ -19,5 +20,7 @@ public interface DataSupplier {
 
     TreeTableView<StatItem> getTreeView();
     TreeMap getTreeMap();
+
+    TaskManager getTaskManager();
 
 }

@@ -10,20 +10,18 @@ public class NestedTask<T extends Task<?>> extends Task<Void> {
     private final List<T> dependants;
 
     public NestedTask(TaskManager mgr, List<T> dependants) {
+        updateTitle("Nested Task");
         this.tskmgr = mgr;
         this.dependants = dependants;
     }
 
     @Override
     protected Void call() throws Exception {
-
-        dependants.forEach(tskmgr::execute);
-
-        while(!dependants.stream().allMatch(t -> t.isDone())) {
-            //Thread.sleep(100);
-            Thread.yield();
+        //dependants.forEach(d -> d.run());
+        for(T subtask : dependants) {
+            updateTitle(subtask.getTitle());
+            subtask.run();
         }
-
         return null;
     }
 

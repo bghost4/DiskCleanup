@@ -59,6 +59,7 @@ public class DuplicateUI extends VBox {
 
                 @Override
                 protected Void call() throws Exception {
+                    updateTitle("Finding Duplicates");
                     updateMessage("Finding Files with Common Sizes");
                     List<TreeItem<StatItem>> firstSort = TreeItemUtils.flatMapTreeItem(supplier.getTreeView().getRoot())
                             .filter(ti -> (ti.getValue().pathType() == PathType.FILE && ti.getValue().length() > minFileSize))

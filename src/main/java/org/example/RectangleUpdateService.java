@@ -76,7 +76,7 @@ public class RectangleUpdateService extends Service<Void>{
             return new Task<>() {
                 @Override
                 protected Void call() throws Exception {
-                    System.out.println("Rectangle Updater Started");
+                    updateTitle("Updating Rectangles");
                     if(packingOrder != null && packingOrder.size() > 0) {
                         //process the list in 100 item chunks
                         //todo set the number of items to break into a property
