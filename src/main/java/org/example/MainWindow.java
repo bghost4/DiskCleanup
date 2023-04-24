@@ -35,7 +35,6 @@ import org.example.searchStrategy.*;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -98,17 +97,12 @@ public class MainWindow extends VBox implements DataSupplier {
 
     private final Tika tika = new Tika();
 
+    TaskManager tskmgr = new TaskManager(4);
+
     @FXML
     private ProgressBar pbMemUsage;
 
     final TreeMap treeMap = new TreeMap();
-
-    //TODO make this a prefrence
-    private final Executor exec = Executors.newFixedThreadPool(4, r -> {
-        Thread t = Executors.defaultThreadFactory().newThread(r);
-        t.setDaemon(true);
-        return t;
-    });
 
     private final ScheduledService<Void> svcMemoryUsage = new ScheduledService<>() {
         @Override
@@ -300,7 +294,7 @@ public class MainWindow extends VBox implements DataSupplier {
         }
         me.setExpanded(true);
 
-        NestedTask<FileScannerTask> nt = new NestedTask<>(exec,
+        NestedTask<FileScannerTask> nt = new NestedTask<>(tskmgr,
                 me.getChildren().stream().filter(ti -> Files.isDirectory(TreeItemUtils.buildPath(ti)))
                         .map(v -> new FileScannerTask(v,typeExtractor)).collect(Collectors.toList()));
 
@@ -340,10 +334,10 @@ public class MainWindow extends VBox implements DataSupplier {
                             TreeItemUtils.flatMapTreeItem(ttFileView.getRoot()).filter(TreeItemUtils::isRegularFile).map(item -> item.getValue().owner()).distinct().sorted(Comparator.comparing(Principal::getName)).toList()
                     );
                 };
-                exec.execute(r);
+                tskmgr.execute(r);
                 buildTreeRunning.set(false);
         });
-        exec.execute(nt);
+        tskmgr.execute(nt);
         return me;
     }
 
@@ -690,7 +684,7 @@ public class MainWindow extends VBox implements DataSupplier {
                 delete(selection);
             });
 
-            exec.execute(compressionTask);
+            tskmgr.execute(compressionTask);
 
     }
 
@@ -708,7 +702,7 @@ public class MainWindow extends VBox implements DataSupplier {
             }
             treeMap.rebuild();
         } );
-        exec.execute(fileScannerTask);
+        tskmgr.execute(fileScannerTask);
     }
 
     private void zoomIn(TreeItem<StatItem> item) {
@@ -743,7 +737,7 @@ public class MainWindow extends VBox implements DataSupplier {
         if(selectedItem == null ) { return; }
         Path p = selectedItem.getValue().p();
         Runnable r = () -> Desktop.getDesktop().browseFileDirectory(p.toFile());
-        exec.execute(r);
+        tskmgr.execute(r);
     }
 
     private void openPath(TreeItem<StatItem> item) {
@@ -756,7 +750,7 @@ public class MainWindow extends VBox implements DataSupplier {
                     throw new RuntimeException(e);
                 }
             };
-            exec.execute(r);
+            tskmgr.execute(r);
     }
 
     void generateFileTypeLegend() {
