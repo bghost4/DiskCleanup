@@ -61,7 +61,6 @@ public class TreeMap extends StackPane {
     private final Service<Path> shadeMaker = new Service<>() {
         @Override
         protected Task<Path> createTask() {
-
             return new ShadeGenerator(pathToRect::get, selection.get().get(), pUsage.getWidth(), pUsage.getHeight());
         }
     };
